@@ -155,7 +155,7 @@
   <button id="sound-btn">🔇</button>
 
   <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 0.01; warmupTolerance: 1; missTolerance: 5;"
+    mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.00001; filterBeta: 0.001; warmupTolerance: 2; missTolerance: 5;"
     color-space="sRGB"
     renderer="colorManagement: true;"
     vr-mode-ui="enabled: false"
@@ -168,7 +168,7 @@
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <a-entity mindar-image-target="targetIndex: 0" smooth-track="factor: 0.04; posThreshold: 0.002; rotThreshold: 0.003">
+    <a-entity mindar-image-target="targetIndex: 0" smooth-track="factor: 0.02; posThreshold: 0.005; rotThreshold: 0.008">
       <a-plane
         id="video-plane"
         material="shader: flat; src: #video-src;"
