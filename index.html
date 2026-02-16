@@ -145,7 +145,7 @@
     loading-screen="enabled: false">
 
     <a-assets>
-      <video id="video-src" src="./12.mp4" muted autoplay playsinline loop crossorigin="anonymous"></video>
+      <video id="video-src" src="./done.mp4" muted autoplay playsinline loop crossorigin="anonymous"></video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -153,7 +153,7 @@
     <a-entity mindar-image-target="targetIndex: 0">
       <a-plane
         id="video-plane"
-        material="shader: chromakey-black; src: #video-src; threshold: 0.35; smoothing: 0.15;"
+        material="shader: chromakey-black; src: #video-src; threshold: 0.45; smoothing: 0.2;"
         width="1.6"
         height="0.9"
         position="0 0.5 0"
