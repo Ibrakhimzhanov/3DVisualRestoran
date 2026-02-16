@@ -97,12 +97,14 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    #hint {
-      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.7); color: white;
-      padding: 12px 24px; border-radius: 25px;
-      font-family: -apple-system, sans-serif; font-size: 14px;
-      z-index: 100; text-align: center;
+    #logo {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      z-index: 100;
+    }
+    #logo img {
+      width: 70px; height: 70px;
+      border-radius: 50%;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
     }
 
     #dish-name {
@@ -137,7 +139,7 @@
     }
 
     #sound-btn {
-      position: fixed; bottom: 30px; right: 20px;
+      position: fixed; bottom: 100px; right: 20px;
       width: 50px; height: 50px;
       background: rgba(0,0,0,0.7); color: white;
       border: none; border-radius: 50%;
@@ -174,7 +176,7 @@
     <button id="ios-start-btn">Запустить</button>
   </div>
 
-  <div id="hint">Наведите камеру на меню</div>
+  <div id="logo"><img src="./logo.png" alt="AFRA Istanbul"></div>
   <div id="dish-name">
     <div class="title">Эт Кебаб</div>
     <div class="ornament">&#10087;</div>
@@ -213,7 +215,7 @@
     const video = document.querySelector('#video-src');
     const soundBtn = document.getElementById('sound-btn');
     const scene = document.querySelector('a-scene');
-    const hint = document.getElementById('hint');
+    const logo = document.getElementById('logo');
     const dishName = document.getElementById('dish-name');
     const iosOverlay = document.getElementById('ios-start');
     const iosBtn = document.getElementById('ios-start-btn');
@@ -247,14 +249,14 @@
     document.querySelectorAll('[mindar-image-target]').forEach((target) => {
       target.addEventListener('targetFound', () => {
         dishName.style.display = 'block';
-        hint.style.display = 'none';
+        logo.style.display = 'block';
         soundBtn.style.display = 'block';
         video.play().catch(() => {});
       });
 
       target.addEventListener('targetLost', () => {
         dishName.style.display = 'none';
-        hint.style.display = 'block';
+        logo.style.display = 'block';
         soundBtn.style.display = 'none';
       });
     });
