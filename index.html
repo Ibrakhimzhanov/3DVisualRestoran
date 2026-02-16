@@ -7,93 +7,21 @@
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   <script>
-    // Полное управление жестами: 1 палец = вращение XY, 2 пальца = зум
-    AFRAME.registerComponent('gesture-handler', {
+    AFRAME.registerComponent('video-handler', {
       init: function () {
-        this.rotX = 0;
-        this.rotY = 0;
-        this.scaleFactor = 1;
-        this.startX = 0;
-        this.startY = 0;
-        this.startDist = 0;
-        this.baseScale = { x: 10, y: 10, z: 10 };
-
-        const canvas = this.el.sceneEl.canvas;
-
-        canvas.addEventListener('touchstart', (e) => {
-          if (e.touches.length === 1) {
-            this.startX = e.touches[0].clientX;
-            this.startY = e.touches[0].clientY;
-          } else if (e.touches.length === 2) {
-            this.startDist = this.getTouchDist(e.touches);
-          }
-          e.preventDefault();
-        }, { passive: false });
-
-        canvas.addEventListener('touchmove', (e) => {
-          if (e.touches.length === 1) {
-            // Вращение: Y свободно 360, X ограничен (только сверху, не снизу)
-            const dx = e.touches[0].clientX - this.startX;
-            const dy = e.touches[0].clientY - this.startY;
-            this.startX = e.touches[0].clientX;
-            this.startY = e.touches[0].clientY;
-            this.rotY += dx * 0.5;
-            this.rotX = Math.min(Math.max(this.rotX - dy * 0.5, -60), 30);
-            this.el.setAttribute('rotation', {
-              x: this.rotX,
-              y: this.rotY,
-              z: 0
-            });
-          } else if (e.touches.length === 2) {
-            // Зум двумя пальцами
-            const dist = this.getTouchDist(e.touches);
-            const delta = dist / this.startDist;
-            this.startDist = dist;
-            this.scaleFactor = Math.min(Math.max(this.scaleFactor * delta, 0.3), 5);
-            const s = this.baseScale;
-            this.el.setAttribute('scale', {
-              x: s.x * this.scaleFactor,
-              y: s.y * this.scaleFactor,
-              z: s.z * this.scaleFactor
-            });
-          }
-          e.preventDefault();
-        }, { passive: false });
-      },
-
-      getTouchDist: function (touches) {
-        const dx = touches[0].clientX - touches[1].clientX;
-        const dy = touches[0].clientY - touches[1].clientY;
-        return Math.sqrt(dx * dx + dy * dy);
-      }
-    });
-
-    // Плавное появление
-    AFRAME.registerComponent('appear-animation', {
-      schema: {
-        targetScale: { type: 'vec3', default: { x: 10, y: 10, z: 10 } },
-        duration: { type: 'number', default: 1000 }
-      },
-      init: function () {
-        this.el.setAttribute('scale', '0.01 0.01 0.01');
+        const video = document.querySelector('#video-src');
+        const target = this.el.closest('[mindar-image-target]');
         this.el.setAttribute('visible', false);
 
-        const target = this.el.closest('[mindar-image-target]');
         if (target) {
           target.addEventListener('targetFound', () => {
             this.el.setAttribute('visible', true);
-            const t = this.data.targetScale;
-            this.el.setAttribute('animation', {
-              property: 'scale',
-              from: '0.01 0.01 0.01',
-              to: `${t.x} ${t.y} ${t.z}`,
-              dur: this.data.duration,
-              easing: 'easeOutElastic'
-            });
+            video.play().catch(() => {});
           });
+
           target.addEventListener('targetLost', () => {
-            this.el.setAttribute('scale', '0.01 0.01 0.01');
             this.el.setAttribute('visible', false);
+            video.pause();
           });
         }
       }
@@ -135,6 +63,16 @@
       font-family: -apple-system, sans-serif; font-size: 16px; font-weight: 600;
       z-index: 100; display: none;
     }
+
+    #sound-btn {
+      position: fixed; bottom: 30px; right: 20px;
+      width: 50px; height: 50px;
+      background: rgba(0,0,0,0.7); color: white;
+      border: none; border-radius: 50%;
+      font-size: 22px; z-index: 100;
+      display: none; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
   </style>
 </head>
 <body>
@@ -147,59 +85,64 @@
 
   <div id="hint">Наведите камеру на меню</div>
   <div id="dish-name"></div>
+  <button id="sound-btn">🔇</button>
 
   <a-scene
     mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.1; filterBeta: 10;"
     color-space="sRGB"
-    renderer="colorManagement: true; physicallyCorrectLights: true;"
+    renderer="colorManagement: true;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
     loading-screen="enabled: false">
 
-    <a-light type="ambient" intensity="1.2"></a-light>
-    <a-light type="directional" intensity="1.0" position="0 5 3"></a-light>
-    <a-light type="directional" intensity="0.4" position="0 -2 -1"></a-light>
-
     <a-assets>
-      <a-asset-item id="dish-0" src="./Chicken.glb"></a-asset-item>
+      <video id="video-src" src="./video.mp4" muted autoplay playsinline loop crossorigin="anonymous"></video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
-      <a-gltf-model
-        src="#dish-0"
-        position="0 0 0.2"
-        rotation="0 180 0"
-        appear-animation="targetScale: 10 10 10; duration: 1000"
-        gesture-handler>
-      </a-gltf-model>
+      <a-plane
+        id="video-plane"
+        src="#video-src"
+        material="shader: flat"
+        width="1.6"
+        height="0.9"
+        position="0 0.5 0"
+        video-handler>
+      </a-plane>
     </a-entity>
 
   </a-scene>
 
   <script>
-    const dishNames = {
-      0: "Italian Supreme Pizza — $16.95",
-    };
+    const video = document.querySelector('#video-src');
+    const soundBtn = document.getElementById('sound-btn');
+    const scene = document.querySelector('a-scene');
+    const hint = document.getElementById('hint');
+    const dishName = document.getElementById('dish-name');
 
-    const scene = document.querySelector("a-scene");
-    scene.addEventListener("arReady", () => {
-      document.getElementById("loading").style.display = "none";
+    scene.addEventListener('arReady', () => {
+      document.getElementById('loading').style.display = 'none';
     });
 
-    document.querySelectorAll("[mindar-image-target]").forEach((target) => {
-      target.addEventListener("targetFound", () => {
-        const idx = target.getAttribute("mindar-image-target").targetIndex;
-        const nameEl = document.getElementById("dish-name");
-        nameEl.textContent = dishNames[idx] || "Блюдо";
-        nameEl.style.display = "block";
-        document.getElementById("hint").style.display = "none";
+    soundBtn.addEventListener('click', () => {
+      video.muted = !video.muted;
+      soundBtn.textContent = video.muted ? '🔇' : '🔊';
+    });
+
+    document.querySelectorAll('[mindar-image-target]').forEach((target) => {
+      target.addEventListener('targetFound', () => {
+        dishName.textContent = 'AR Видео';
+        dishName.style.display = 'block';
+        hint.style.display = 'none';
+        soundBtn.style.display = 'block';
       });
 
-      target.addEventListener("targetLost", () => {
-        document.getElementById("dish-name").style.display = "none";
-        document.getElementById("hint").style.display = "block";
+      target.addEventListener('targetLost', () => {
+        dishName.style.display = 'none';
+        hint.style.display = 'block';
+        soundBtn.style.display = 'none';
       });
     });
   </script>
