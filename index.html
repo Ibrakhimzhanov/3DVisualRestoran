@@ -154,7 +154,8 @@
     <a-entity mindar-image-target="targetIndex: 0">
       <a-plane
         id="video-plane"
-        material="shader: chromakey-black; src: #video-src; threshold: 0.05; smoothing: 0.03;"
+        src="#video-src"
+        material="shader: flat; transparent: false;"
         width="1.6"
         height="0.9"
         position="0 0.5 0"
