@@ -146,7 +146,7 @@
     loading-screen="enabled: false">
 
     <a-assets>
-      <video id="video-src" src="./done.mp4" muted autoplay playsinline loop crossorigin="anonymous"></video>
+      <video id="video-src" src="./done.mp4" muted autoplay playsinline webkit-playsinline loop crossorigin="anonymous" preload="auto"></video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -173,6 +173,13 @@
 
     scene.addEventListener('arReady', () => {
       document.getElementById('loading').style.display = 'none';
+      // iOS: запускаем видео после первого тапа
+      const iosPlay = () => {
+        video.play().catch(() => {});
+        document.removeEventListener('touchstart', iosPlay);
+      };
+      document.addEventListener('touchstart', iosPlay);
+      video.play().catch(() => {});
     });
 
     soundBtn.addEventListener('click', () => {
