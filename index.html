@@ -7,56 +7,6 @@
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   <script>
-    // Шейдер для удаления чёрного фона из видео
-    AFRAME.registerShader('chromakey-black', {
-      schema: {
-        src: {type: 'map'},
-        threshold: {type: 'number', default: 0.15},
-        smoothing: {type: 'number', default: 0.1}
-      },
-      init: function (data) {
-        const videoTexture = new THREE.VideoTexture(data.src);
-        videoTexture.colorSpace = THREE.SRGBColorSpace;
-        this.material = new THREE.ShaderMaterial({
-          uniforms: {
-            map: {value: videoTexture},
-            threshold: {value: data.threshold},
-            smoothing: {value: data.smoothing}
-          },
-          vertexShader: `
-            varying vec2 vUv;
-            void main() {
-              vUv = uv;
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-          `,
-          fragmentShader: `
-            precision mediump float;
-            uniform sampler2D map;
-            uniform float threshold;
-            uniform float smoothing;
-            varying vec2 vUv;
-            void main() {
-              vec4 color = texture2D(map, vUv);
-              float brightness = (color.r + color.g + color.b) / 3.0;
-              // Чёрный = низкая яркость
-              float isBlack = 1.0 - smoothstep(threshold - smoothing, threshold + smoothing, brightness);
-              color.a = 1.0 - isBlack;
-              gl_FragColor = color;
-            }
-          `,
-          transparent: true,
-          side: THREE.DoubleSide
-        });
-      },
-      update: function (data) {
-        if (this.material.uniforms) {
-          this.material.uniforms.threshold.value = data.threshold;
-          this.material.uniforms.smoothing.value = data.smoothing;
-        }
-      }
-    });
-
     AFRAME.registerComponent('video-handler', {
       init: function () {
         const video = document.querySelector('#video-src');
@@ -123,6 +73,20 @@
       display: none; cursor: pointer;
       -webkit-tap-highlight-color: transparent;
     }
+
+    #ios-start {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8); z-index: 10000;
+      display: none; justify-content: center; align-items: center;
+      flex-direction: column; color: white;
+      font-family: -apple-system, sans-serif;
+    }
+    #ios-start button {
+      padding: 16px 40px; font-size: 18px;
+      background: #b43214; color: white; border: none;
+      border-radius: 12px; cursor: pointer;
+    }
+    #ios-start p { margin-bottom: 20px; font-size: 16px; }
   </style>
 </head>
 <body>
@@ -133,12 +97,17 @@
     <p>Разрешите доступ к камере</p>
   </div>
 
+  <div id="ios-start">
+    <p>Нажмите чтобы запустить AR</p>
+    <button id="ios-start-btn">Запустить</button>
+  </div>
+
   <div id="hint">Наведите камеру на меню</div>
   <div id="dish-name"></div>
   <button id="sound-btn">🔇</button>
 
   <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.1; filterBeta: 10;"
+    mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.001; filterBeta: 0.5;"
     color-space="sRGB"
     renderer="colorManagement: true;"
     vr-mode-ui="enabled: false"
@@ -170,16 +139,28 @@
     const scene = document.querySelector('a-scene');
     const hint = document.getElementById('hint');
     const dishName = document.getElementById('dish-name');
+    const iosOverlay = document.getElementById('ios-start');
+    const iosBtn = document.getElementById('ios-start-btn');
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
     scene.addEventListener('arReady', () => {
       document.getElementById('loading').style.display = 'none';
-      // iOS: запускаем видео после первого тапа
-      const iosPlay = () => {
+
+      if (isIOS) {
+        // iOS: показываем кнопку запуска (нужен жест пользователя)
+        iosOverlay.style.display = 'flex';
+        iosBtn.addEventListener('click', () => {
+          video.muted = true;
+          video.play().then(() => {
+            iosOverlay.style.display = 'none';
+          }).catch(() => {
+            iosOverlay.style.display = 'none';
+          });
+        });
+      } else {
         video.play().catch(() => {});
-        document.removeEventListener('touchstart', iosPlay);
-      };
-      document.addEventListener('touchstart', iosPlay);
-      video.play().catch(() => {});
+      }
     });
 
     soundBtn.addEventListener('click', () => {
@@ -193,6 +174,7 @@
         dishName.style.display = 'block';
         hint.style.display = 'none';
         soundBtn.style.display = 'block';
+        video.play().catch(() => {});
       });
 
       target.addEventListener('targetLost', () => {
