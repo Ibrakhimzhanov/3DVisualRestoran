@@ -7,14 +7,18 @@
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   <script>
-    // Стабилизатор — сглаживает позицию и поворот целевой entity
+    // Стабилизатор — сглаживает позицию и поворот + мёртвая зона
     AFRAME.registerComponent('smooth-track', {
       schema: {
-        factor: {type: 'number', default: 0.05}
+        factor: {type: 'number', default: 0.04},
+        posThreshold: {type: 'number', default: 0.002},
+        rotThreshold: {type: 'number', default: 0.003}
       },
       init: function () {
         this.smoothPos = new THREE.Vector3();
         this.smoothQuat = new THREE.Quaternion();
+        this.prevRawPos = new THREE.Vector3();
+        this.prevRawQuat = new THREE.Quaternion();
         this.started = false;
       },
       tick: function () {
@@ -24,13 +28,27 @@
         if (!this.started) {
           this.smoothPos.copy(obj.position);
           this.smoothQuat.copy(obj.quaternion);
+          this.prevRawPos.copy(obj.position);
+          this.prevRawQuat.copy(obj.quaternion);
           this.started = true;
           return;
         }
 
+        // Dead zone: ignore micro-movements
+        const posDelta = obj.position.distanceTo(this.prevRawPos);
+        const rotDelta = this.prevRawQuat.angleTo(obj.quaternion);
+
+        this.prevRawPos.copy(obj.position);
+        this.prevRawQuat.copy(obj.quaternion);
+
         const f = this.data.factor;
-        this.smoothPos.lerp(obj.position, f);
-        this.smoothQuat.slerp(obj.quaternion, f);
+
+        if (posDelta > this.data.posThreshold) {
+          this.smoothPos.lerp(obj.position, f);
+        }
+        if (rotDelta > this.data.rotThreshold) {
+          this.smoothQuat.slerp(obj.quaternion, f);
+        }
 
         obj.position.copy(this.smoothPos);
         obj.quaternion.copy(this.smoothQuat);
