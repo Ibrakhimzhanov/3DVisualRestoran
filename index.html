@@ -320,6 +320,8 @@
       <video id="video-top" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous"
         src="./mu2.mp4">
       </video>
+      <video id="video-bottom" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous">
+      </video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -383,14 +385,8 @@
     let menuOpen = false;
     let activeDishIdx = 0;
 
-    // Нижнее видео — динамическое
-    const videoBottom = document.createElement('video');
-    videoBottom.muted = true;
-    videoBottom.loop = true;
-    videoBottom.playsInline = true;
-    videoBottom.setAttribute('webkit-playsinline', '');
-    videoBottom.crossOrigin = 'anonymous';
-    videoBottom.preload = 'auto';
+    // Нижнее видео — из DOM (важно для iOS)
+    const videoBottom = document.querySelector('#video-bottom');
 
     function loadBottomVideo(src) {
       videoBottom.src = src;
@@ -528,28 +524,26 @@
       document.getElementById('loading').style.display = 'none';
     });
 
-    // iOS: разблокируем воспроизведение видео при первом тапе
-    let iosUnlocked = false;
-    document.addEventListener('touchstart', () => {
-      if (iosUnlocked) return;
-      iosUnlocked = true;
-      videoTop.play().then(() => videoTop.pause()).catch(() => {});
-      videoBottom.play().then(() => videoBottom.pause()).catch(() => {});
-    }, { once: false });
 
     // === targetFound / targetLost ===
     const targetEl = document.getElementById('target-0');
 
+    const topPlane = document.getElementById('video-top-plane');
+    topPlane.setAttribute('visible', false);
+    bottomPlane.setAttribute('visible', false);
+
     targetEl.addEventListener('targetFound', () => {
+      topPlane.setAttribute('visible', true);
+      bottomPlane.setAttribute('visible', true);
       dishSelector.style.display = 'block';
       selectDish(0);
-      bottomPlane.setAttribute('visible', true);
     });
 
     targetEl.addEventListener('targetLost', () => {
+      topPlane.setAttribute('visible', false);
+      bottomPlane.setAttribute('visible', false);
       dishSelector.style.display = 'none';
       bottomBar.style.display = 'none';
-      bottomPlane.setAttribute('visible', false);
       videoTop.pause();
       videoBottom.pause();
 
