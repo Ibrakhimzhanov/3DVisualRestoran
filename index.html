@@ -141,12 +141,13 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Нижняя панель — логотип по центру, звук справа */
+    /* Нижняя панель */
     #bottom-bar {
       position: fixed; bottom: 20px; left: 0; right: 0;
       z-index: 100; display: none;
-      padding: 0 20px;
     }
+
+    /* Плашка блюда + цена */
     #dish-label {
       position: absolute; left: 50%; transform: translateX(-50%);
       bottom: 76px;
@@ -156,17 +157,16 @@
       padding: 7px 22px;
       white-space: nowrap;
       box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+      transition: opacity 0.3s;
     }
     .dish-name {
       font-family: -apple-system, sans-serif;
       font-size: 16px; font-weight: 700;
       color: #c8963e;
-      letter-spacing: 0.5px;
     }
     .dish-sep {
       color: rgba(200,150,62,0.4);
-      margin: 0 8px;
-      font-size: 14px;
+      margin: 0 8px; font-size: 14px;
     }
     .dish-price {
       font-family: -apple-system, sans-serif;
@@ -174,10 +174,12 @@
       color: #e8c76a;
     }
 
+    /* Логотип MUU — центр */
     #logo {
       position: absolute; left: 50%; transform: translateX(-50%); bottom: 0;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
+      z-index: 10;
       animation: logo-pulse 1.8s ease-in-out infinite;
     }
     #logo img {
@@ -185,16 +187,63 @@
       border-radius: 50%;
       box-shadow: 0 2px 14px rgba(0,0,0,0.5);
     }
-    #logo.sound-on {
-      animation: none;
-    }
-    #logo.sound-on img {
-      box-shadow: 0 0 8px rgba(200,150,62,0.3);
-    }
+    #logo.menu-open { animation: none; }
     @keyframes logo-pulse {
       0% { transform: translateX(-50%) scale(1); filter: drop-shadow(0 0 4px rgba(200,150,62,0.3)); }
       50% { transform: translateX(-50%) scale(1.1); filter: drop-shadow(0 0 14px rgba(200,150,62,0.7)); }
       100% { transform: translateX(-50%) scale(1); filter: drop-shadow(0 0 4px rgba(200,150,62,0.3)); }
+    }
+
+    /* Кнопка звука — справа от логотипа */
+    #sound-btn {
+      position: absolute; right: 20px; bottom: 12px;
+      width: 42px; height: 42px;
+      background: rgba(0,0,0,0.8);
+      border: 1.5px solid rgba(200,150,62,0.5);
+      border-radius: 50%;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10;
+    }
+    #sound-btn .icon { font-size: 18px; }
+
+    /* Радиальное меню блюд */
+    #food-menu {
+      position: absolute; left: 50%; bottom: 33px;
+      width: 0; height: 0;
+      z-index: 5;
+    }
+    .food-item {
+      position: absolute;
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.88);
+      border: 1.5px solid #c8963e;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      opacity: 0;
+      transform: scale(0.3);
+      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      pointer-events: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    .food-item span {
+      font-family: -apple-system, sans-serif;
+      font-size: 10px; font-weight: 700;
+      color: #c8963e;
+      text-align: center;
+      line-height: 1.1;
+    }
+    .food-item.active {
+      border-color: #e8c76a;
+      background: rgba(200,150,62,0.25);
+    }
+    #food-menu.open .food-item {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
     }
 
     #ios-start {
@@ -231,7 +280,17 @@
       <span class="dish-sep">·</span>
       <span class="dish-price">180 000 сум</span>
     </div>
+
+    <div id="food-menu">
+      <div class="food-item active" data-index="0"><span>Стейк</span></div>
+      <div class="food-item" data-index="1"><span>Салат</span></div>
+      <div class="food-item" data-index="2"><span>Кола</span></div>
+      <div class="food-item" data-index="3"><span>Махи</span></div>
+      <div class="food-item" data-index="4"><span>Десерт</span></div>
+    </div>
+
     <div id="logo"><img src="./logomu.png" alt="MUU Steak House"></div>
+    <button id="sound-btn"><span class="icon">🔇</span></button>
   </div>
 
   <a-scene
@@ -275,6 +334,15 @@
   </a-scene>
 
   <script>
+    // === Данные меню (видео + цены) ===
+    const menuItems = [
+      { name: 'Стейк',  price: '180 000 сум', video: './dish-video.mp4' },
+      { name: 'Салат',   price: '45 000 сум',  video: './dish-video.mp4' },
+      { name: 'Кола',    price: '15 000 сум',  video: './dish-video.mp4' },
+      { name: 'Махи',    price: '65 000 сум',  video: './dish-video.mp4' },
+      { name: 'Десерт',  price: '55 000 сум',  video: './dish-video.mp4' },
+    ];
+
     const videoTop = document.querySelector('#video-top');
     const logo = document.getElementById('logo');
     const scene = document.querySelector('a-scene');
@@ -282,19 +350,42 @@
     const iosOverlay = document.getElementById('ios-start');
     const iosBtn = document.getElementById('ios-start-btn');
     const bottomPlane = document.getElementById('video-bottom-plane');
+    const foodMenu = document.getElementById('food-menu');
+    const foodItems = document.querySelectorAll('.food-item');
+    const dishNameEl = document.querySelector('.dish-name');
+    const dishPriceEl = document.querySelector('.dish-price');
+    const soundBtn = document.getElementById('sound-btn');
 
-    // Видео 2 (нижнее, со звуком) — загружаем динамически
+    let menuOpen = false;
+    let currentIndex = 0;
+
+    // Нижнее видео — динамическое
     const videoBottom = document.createElement('video');
-    videoBottom.src = './dish-video.mp4';
     videoBottom.muted = true;
     videoBottom.loop = true;
     videoBottom.playsInline = true;
     videoBottom.setAttribute('webkit-playsinline', '');
     videoBottom.crossOrigin = 'anonymous';
     videoBottom.preload = 'auto';
+
+    function loadBottomVideo(src) {
+      videoBottom.src = src;
+      videoBottom.load();
+      videoBottom.play().catch(() => {});
+
+      // Обновляем текстуру
+      const mesh = bottomPlane.getObject3D('mesh');
+      if (mesh) {
+        const texture = new THREE.VideoTexture(videoBottom);
+        texture.minFilter = THREE.LinearFilter;
+        mesh.material = new THREE.MeshBasicMaterial({ map: texture });
+      }
+    }
+
+    // Первая загрузка
+    videoBottom.src = menuItems[0].video;
     videoBottom.load();
 
-    // Привязка нижнего видео к плоскости
     function applyBottomTexture() {
       const mesh = bottomPlane.getObject3D('mesh');
       if (mesh && !mesh._applied) {
@@ -307,6 +398,71 @@
     videoBottom.addEventListener('loadeddata', applyBottomTexture);
     videoBottom.addEventListener('playing', applyBottomTexture);
 
+    // === Радиальное меню ===
+    // Расположение по полукругу сверху
+    const radius = 90;
+    const startAngle = -180;  // слева
+    const endAngle = 0;    // справа
+    foodItems.forEach((item, i) => {
+      const angle = startAngle + (endAngle - startAngle) * i / (foodItems.length - 1);
+      const rad = angle * Math.PI / 180;
+      const x = Math.cos(rad) * radius;
+      const y = Math.sin(rad) * radius;
+      item.style.left = (x - 28) + 'px';
+      item.style.top = (y - 28) + 'px';
+      item.style.transitionDelay = (i * 0.05) + 's';
+    });
+
+    // Логотип → открыть/закрыть меню
+    logo.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menuOpen = !menuOpen;
+      foodMenu.classList.toggle('open', menuOpen);
+      logo.classList.toggle('menu-open', menuOpen);
+    });
+
+    // Выбор блюда
+    foodItems.forEach((item) => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(item.dataset.index);
+        currentIndex = idx;
+
+        // Обновить активный элемент
+        foodItems.forEach(fi => fi.classList.remove('active'));
+        item.classList.add('active');
+
+        // Обновить название и цену
+        dishNameEl.textContent = menuItems[idx].name;
+        dishPriceEl.textContent = menuItems[idx].price;
+
+        // Сменить видео
+        loadBottomVideo(menuItems[idx].video);
+
+        // Закрыть меню
+        menuOpen = false;
+        foodMenu.classList.remove('open');
+        logo.classList.remove('menu-open');
+      });
+    });
+
+    // Закрыть меню при тапе вне
+    document.addEventListener('click', () => {
+      if (menuOpen) {
+        menuOpen = false;
+        foodMenu.classList.remove('open');
+        logo.classList.remove('menu-open');
+      }
+    });
+
+    // === Звук ===
+    soundBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      videoBottom.muted = !videoBottom.muted;
+      soundBtn.querySelector('.icon').textContent = videoBottom.muted ? '🔇' : '🔊';
+    });
+
+    // === AR ===
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     scene.addEventListener('arReady', () => {
       document.getElementById('loading').style.display = 'none';
@@ -325,12 +481,6 @@
         videoTop.play().catch(() => {});
         videoBottom.play().catch(() => {});
       }
-    });
-
-    // Логотип = кнопка звука (управляет нижним видео)
-    logo.addEventListener('click', () => {
-      videoBottom.muted = !videoBottom.muted;
-      logo.classList.toggle('sound-on', !videoBottom.muted);
     });
 
     document.querySelectorAll('[mindar-image-target]').forEach((target) => {
