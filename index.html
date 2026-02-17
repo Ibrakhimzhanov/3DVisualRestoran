@@ -322,6 +322,7 @@
       </video>
       <video id="video-bottom" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous">
       </video>
+      <img id="logo-img" src="./logomu.png">
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -335,11 +336,32 @@
         position="0 0.68 0.01"
         pinch-zoom="min: 0.5; max: 3">
       </a-plane>
+      <!-- Заглушка верхнего видео -->
+      <a-plane
+        id="loader-top"
+        material="shader: flat; color: #111; side: double"
+        width="2.2" height="1.24"
+        position="0 0.68 0.02">
+        <a-image src="#logo-img" width="0.5" height="0.5" position="0 0 0.01"
+          animation="property: scale; from: 1 1 1; to: 1.1 1.1 1.1; dur: 1000; dir: alternate; loop: true; easing: easeInOutSine">
+        </a-image>
+      </a-plane>
+
       <a-plane
         id="video-bottom-plane"
         material="shader: flat; color: black; side: double"
         width="2.2" height="1.24"
         position="0 -0.68 0.005">
+      </a-plane>
+      <!-- Заглушка нижнего видео -->
+      <a-plane
+        id="loader-bottom"
+        material="shader: flat; color: #111; side: double"
+        width="2.2" height="1.24"
+        position="0 -0.68 0.015">
+        <a-image src="#logo-img" width="0.5" height="0.5" position="0 0 0.01"
+          animation="property: scale; from: 1 1 1; to: 1.1 1.1 1.1; dur: 1000; dir: alternate; loop: true; easing: easeInOutSine">
+        </a-image>
       </a-plane>
     </a-entity>
 
@@ -387,8 +409,24 @@
 
     // Нижнее видео — из DOM (важно для iOS)
     const videoBottom = document.querySelector('#video-bottom');
+    const loaderTop = document.getElementById('loader-top');
+    const loaderBottom = document.getElementById('loader-bottom');
+
+    // Скрыть заглушку когда видео начинает играть
+    videoTop.addEventListener('playing', () => {
+      loaderTop.setAttribute('visible', false);
+    });
+    videoBottom.addEventListener('playing', () => {
+      loaderBottom.setAttribute('visible', false);
+    });
+
+    function showLoaders() {
+      loaderTop.setAttribute('visible', true);
+      loaderBottom.setAttribute('visible', true);
+    }
 
     function loadBottomVideo(src) {
+      loaderBottom.setAttribute('visible', true);
       videoBottom.src = src;
       videoBottom.load();
       videoBottom.play().catch(() => {});
@@ -436,6 +474,7 @@
       });
 
       // Верхнее видео
+      loaderTop.setAttribute('visible', true);
       videoTop.src = dish.topVideo;
       videoTop.currentTime = 0;
       videoTop.play().catch(() => {});
