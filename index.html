@@ -147,6 +147,33 @@
       z-index: 100; display: none;
       padding: 0 20px;
     }
+    #dish-label {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      bottom: 76px;
+      background: rgba(0,0,0,0.82);
+      border: 1px solid rgba(200,150,62,0.4);
+      border-radius: 24px;
+      padding: 7px 22px;
+      white-space: nowrap;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    }
+    .dish-name {
+      font-family: -apple-system, sans-serif;
+      font-size: 16px; font-weight: 700;
+      color: #c8963e;
+      letter-spacing: 0.5px;
+    }
+    .dish-sep {
+      color: rgba(200,150,62,0.4);
+      margin: 0 8px;
+      font-size: 14px;
+    }
+    .dish-price {
+      font-family: -apple-system, sans-serif;
+      font-size: 15px; font-weight: 600;
+      color: #e8c76a;
+    }
+
     #logo {
       position: absolute; left: 50%; transform: translateX(-50%); bottom: 0;
       cursor: pointer;
@@ -199,6 +226,11 @@
   </div>
 
   <div id="bottom-bar">
+    <div id="dish-label">
+      <span class="dish-name">Стейк</span>
+      <span class="dish-sep">·</span>
+      <span class="dish-price">180 000 сум</span>
+    </div>
     <div id="logo"><img src="./logomu.png" alt="MUU Steak House"></div>
   </div>
 
