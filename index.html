@@ -6,7 +6,6 @@
   <title>AR Меню</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-  <script src="https://unpkg.com/aframe-transparent-video-shader@1.0.6/dist/aframe-transparent-video-shader.umd.js"></script>
   <script>
     // Стабилизатор — сглаживает позицию и поворот + мёртвая зона
     AFRAME.registerComponent('smooth-track', {
@@ -94,39 +93,6 @@
         const dx = a.clientX - b.clientX;
         const dy = a.clientY - b.clientY;
         return Math.sqrt(dx * dx + dy * dy);
-      }
-    });
-
-    // Компонент для Safari: stacked video (RGB + маска) с прозрачностью
-    AFRAME.registerComponent('stacked-alpha', {
-      init: function () {
-        this._applied = false;
-        this._videoEl = document.querySelector('#video-src');
-      },
-      tick: function () {
-        if (this._applied) return;
-        const mesh = this.el.getObject3D('mesh');
-        if (!mesh) return;
-        if (!this._videoEl.videoWidth) return; // видео ещё не загружено
-
-        const tex = new THREE.VideoTexture(this._videoEl);
-        tex.minFilter = THREE.LinearFilter;
-        tex.magFilter = THREE.LinearFilter;
-
-        mesh.material = new THREE.ShaderMaterial({
-          uniforms: { map: { value: tex } },
-          vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-          fragmentShader: 'uniform sampler2D map; varying vec2 vUv; void main() { vec2 cUV = vec2(vUv.x, vUv.y * 0.5); vec2 aUV = vec2(vUv.x, vUv.y * 0.5 + 0.5); vec4 c = texture2D(map, cUV); float a = smoothstep(0.05, 0.5, texture2D(map, aUV).r); gl_FragColor = vec4(c.rgb, a); }',
-          transparent: true,
-          depthWrite: false,
-          side: THREE.DoubleSide
-        });
-
-        // Отключаем A-Frame material компонент чтобы не перезаписывал
-        var matComp = this.el.components.material;
-        if (matComp) { matComp.update = function(){}; }
-
-        this._applied = true;
       }
     });
 
@@ -244,24 +210,24 @@
     loading-screen="enabled: false">
 
     <a-assets>
-      <video id="video-src" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous">
-        <source src="./katkebab-alpha.webm" type="video/webm">
-        <source src="./katkebab-stacked.mp4" type="video/mp4">
+      <video id="video-src" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous"
+        src="./dish-video.mp4">
       </video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0" smooth-track="factor: 0.02; posThreshold: 0.005; rotThreshold: 0.008">
-      <!-- Видео блюда (прозрачное) — полная ширина как шеф -->
-      <a-entity
+      <!-- Видео блюда — обычное видео -->
+      <a-plane
         id="video-plane"
-        geometry="primitive: plane; width: 2.2; height: 1.24"
-        material="shader: transparent-video; src: #video-src"
+        material="shader: flat; src: #video-src; side: double"
+        width="2.2"
+        height="1.24"
         position="0 0.68 0.01"
         video-handler
         pinch-zoom="min: 0.5; max: 3">
-      </a-entity>
+      </a-plane>
 
       <!-- Видео шеф-повара — внизу, такой же размер -->
       <a-plane
@@ -309,13 +275,6 @@
     chefVideo.addEventListener('playing', applyChefTexture);
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || isIOS;
-
-    // Safari: добавляем компонент stacked-alpha на видео-плоскость
-    if (isSafari) {
-      document.getElementById('video-plane').setAttribute('stacked-alpha', '');
-    }
-
     scene.addEventListener('arReady', () => {
       document.getElementById('loading').style.display = 'none';
 
