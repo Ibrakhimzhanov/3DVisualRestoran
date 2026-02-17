@@ -4,7 +4,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>AR Меню</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   <script src="https://unpkg.com/aframe-transparent-video-shader@1.0.6/dist/aframe-transparent-video-shader.umd.js"></script>
@@ -143,35 +142,6 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Плашка с названием блюда — компактная */
-    #dish-info {
-      position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
-      background: rgba(245,238,228,0.92);
-      padding: 8px 24px;
-      border-radius: 30px;
-      border: 1px solid rgba(160,100,60,0.25);
-      box-shadow: 0 2px 10px rgba(0,0,0,0.25);
-      z-index: 100; display: none;
-      white-space: nowrap;
-    }
-    #dish-info .name {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 18px; font-weight: 700;
-      color: #5a2d0c;
-      display: inline;
-    }
-    #dish-info .sep {
-      color: #8b5e3c;
-      margin: 0 8px;
-      opacity: 0.5;
-    }
-    #dish-info .price {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 16px; font-weight: 700;
-      color: #7a3b10;
-      display: inline;
-    }
-
     /* Нижняя панель — логотип по центру, звук справа */
     #bottom-bar {
       position: fixed; bottom: 20px; left: 0; right: 0;
@@ -227,11 +197,6 @@
     <button id="ios-start-btn">Запустить</button>
   </div>
 
-  <div id="dish-info">
-    <span class="name">Эт Кебаб</span>
-    <span class="sep">|</span>
-    <span class="price">50.000 сум</span>
-  </div>
   <div id="bottom-bar">
     <div id="logo"><img src="./logo.png" alt="AFRA Istanbul"></div>
     <button id="sound-btn">🔇</button>
@@ -255,40 +220,23 @@
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0" smooth-track="factor: 0.02; posThreshold: 0.005; rotThreshold: 0.008">
-      <!-- Видео блюда (прозрачное) — верхний слой -->
+      <!-- Видео блюда (прозрачное) — полная ширина как шеф -->
       <a-entity
         id="video-plane"
-        geometry="primitive: plane; width: 1.6; height: 0.9"
+        geometry="primitive: plane; width: 2.2; height: 1.24"
         material="shader: transparent-video; src: #video-src"
-        position="0 0.55 0.03"
+        position="0 0.68 0.01"
         video-handler
         pinch-zoom="min: 0.5; max: 3">
       </a-entity>
 
-      <!-- Тень под плашкой -->
-      <a-plane
-        width="1.7"
-        height="0.26"
-        position="0 0.02 0.005"
-        material="shader: flat; color: #3a1a00; opacity: 0.25; side: double">
-      </a-plane>
-
-      <!-- Плашка с названием блюда между видео -->
-      <a-plane
-        id="dish-label"
-        width="1.65"
-        height="0.22"
-        position="0 0.02 0.01"
-        material="shader: flat; color: #f5eee4; opacity: 0.95; side: double">
-      </a-plane>
-
-      <!-- Видео шеф-повара — внизу, большое -->
+      <!-- Видео шеф-повара — внизу, такой же размер -->
       <a-plane
         id="chef-plane"
         material="shader: flat; color: black; side: double"
         width="2.2"
         height="1.24"
-        position="0 -0.75 0.005">
+        position="0 -0.68 0.005">
       </a-plane>
     </a-entity>
 
@@ -298,61 +246,10 @@
     const video = document.querySelector('#video-src');
     const soundBtn = document.getElementById('sound-btn');
     const scene = document.querySelector('a-scene');
-    const dishInfo = document.getElementById('dish-info');
     const bottomBar = document.getElementById('bottom-bar');
     const iosOverlay = document.getElementById('ios-start');
     const iosBtn = document.getElementById('ios-start-btn');
     const chefPlane = document.getElementById('chef-plane');
-
-    // Плашка с названием блюда — рисуем на canvas для кириллицы
-    const labelCanvas = document.createElement('canvas');
-    labelCanvas.width = 1024;
-    labelCanvas.height = 140;
-    const ctx = labelCanvas.getContext('2d');
-    // Фон с лёгким градиентом
-    const grad = ctx.createLinearGradient(0, 0, 0, 140);
-    grad.addColorStop(0, '#f7f0e6');
-    grad.addColorStop(1, '#efe5d6');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 1024, 140);
-    // Тонкая линия сверху и снизу
-    ctx.strokeStyle = 'rgba(160,100,60,0.3)';
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(80, 2); ctx.lineTo(944, 2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(80, 138); ctx.lineTo(944, 138); ctx.stroke();
-    // Текст
-    ctx.fillStyle = '#5a2d0c';
-    ctx.font = 'bold 56px Playfair Display, Georgia, serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('Эт Кебаб', 380, 70);
-    // Разделитель
-    ctx.fillStyle = 'rgba(138,94,60,0.4)';
-    ctx.fillText('·', 530, 66);
-    // Цена
-    ctx.fillStyle = '#7a3b10';
-    ctx.font = 'bold 48px Playfair Display, Georgia, serif';
-    ctx.fillText('50.000 сум', 700, 70);
-
-    const labelPlane = document.getElementById('dish-label');
-    const labelTexture = new THREE.CanvasTexture(labelCanvas);
-    function applyLabelTexture() {
-      const mesh = labelPlane.getObject3D('mesh');
-      if (mesh && !mesh._labelApplied) {
-        mesh.material = new THREE.MeshBasicMaterial({ map: labelTexture, transparent: true });
-        mesh._labelApplied = true;
-        return true;
-      }
-      return false;
-    }
-    // Попытка сразу, если уже загружен
-    if (!applyLabelTexture()) {
-      // Если mesh ещё не готов — пробуем через loaded и через интервал
-      labelPlane.addEventListener('loaded', applyLabelTexture);
-      const labelInterval = setInterval(() => {
-        if (applyLabelTexture()) clearInterval(labelInterval);
-      }, 200);
-    }
 
     // Создаём chef видео динамически (не через a-assets чтобы не блокировать загрузку)
     const chefVideo = document.createElement('video');
@@ -407,7 +304,6 @@
 
     document.querySelectorAll('[mindar-image-target]').forEach((target) => {
       target.addEventListener('targetFound', () => {
-        dishInfo.style.display = 'block';
         bottomBar.style.display = 'block';
         chefPlane.setAttribute('visible', true);
         video.play().catch(() => {});
@@ -415,7 +311,6 @@
       });
 
       target.addEventListener('targetLost', () => {
-        dishInfo.style.display = 'none';
         bottomBar.style.display = 'none';
         chefPlane.setAttribute('visible', false);
       });
