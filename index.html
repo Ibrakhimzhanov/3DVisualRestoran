@@ -100,13 +100,9 @@
 
     AFRAME.registerComponent('video-handler', {
       init: function () {
+        const video = document.querySelector('#video-src');
         const target = this.el.closest('[mindar-image-target]');
         this.el.setAttribute('visible', false);
-
-        // Определяем какое видео привязано к этому элементу
-        const matSrc = this.el.getAttribute('material');
-        const isChef = matSrc && matSrc.includes('chef-src');
-        const video = document.querySelector(isChef ? '#chef-src' : '#video-src');
 
         if (target) {
           target.addEventListener('targetFound', () => {
@@ -249,7 +245,7 @@
     device-orientation-permission-ui="enabled: false"
     loading-screen="enabled: false">
 
-    <a-assets timeout="5000">
+    <a-assets>
       <video id="video-src" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous">
         <source src="./katkebab-alpha.webm" type="video/webm">
         <source src="./katkebab.mov" type="video/quicktime">
