@@ -295,17 +295,21 @@
     chefVideo.playsInline = true;
     chefVideo.setAttribute('webkit-playsinline', '');
     chefVideo.crossOrigin = 'anonymous';
-    chefVideo.preload = 'metadata';
+    chefVideo.preload = 'auto';
+    chefVideo.load();
 
-    // Привязка chef видео к плоскости после загрузки
-    chefVideo.addEventListener('loadeddata', () => {
-      const texture = new THREE.VideoTexture(chefVideo);
-      texture.minFilter = THREE.LinearFilter;
+    // Привязка chef видео к плоскости
+    function applyChefTexture() {
       const mesh = chefPlane.getObject3D('mesh');
-      if (mesh) {
+      if (mesh && !mesh._chefApplied) {
+        const texture = new THREE.VideoTexture(chefVideo);
+        texture.minFilter = THREE.LinearFilter;
         mesh.material = new THREE.MeshBasicMaterial({ map: texture });
+        mesh._chefApplied = true;
       }
-    });
+    }
+    chefVideo.addEventListener('loadeddata', applyChefTexture);
+    chefVideo.addEventListener('playing', applyChefTexture);
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
