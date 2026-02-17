@@ -97,18 +97,55 @@
       }
     });
 
-    AFRAME.registerComponent('video-handler', {
+    // Шейдер для stacked-видео: верхняя половина = RGB, нижняя = альфа-маска
+    AFRAME.registerComponent('alpha-video', {
       init: function () {
         const video = document.querySelector('#video-src');
         const target = this.el.closest('[mindar-image-target]');
         this.el.setAttribute('visible', false);
+
+        const texture = new THREE.VideoTexture(video);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.format = THREE.RGBAFormat;
+
+        const material = new THREE.ShaderMaterial({
+          uniforms: { map: { value: texture } },
+          vertexShader: `
+            varying vec2 vUv;
+            void main() {
+              vUv = uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `,
+          fragmentShader: `
+            uniform sampler2D map;
+            varying vec2 vUv;
+            void main() {
+              vec2 colorUv = vec2(vUv.x, vUv.y * 0.5);
+              vec2 alphaUv = vec2(vUv.x, vUv.y * 0.5 + 0.5);
+              vec4 color = texture2D(map, colorUv);
+              float alpha = texture2D(map, alphaUv).r;
+              gl_FragColor = vec4(color.rgb, alpha);
+            }
+          `,
+          transparent: true,
+          side: THREE.DoubleSide
+        });
+
+        // Ждём пока mesh будет готов
+        const applyMaterial = () => {
+          const mesh = this.el.getObject3D('mesh');
+          if (mesh) { mesh.material = material; }
+        };
+        if (this.el.getObject3D('mesh')) { applyMaterial(); }
+        else { this.el.addEventListener('loaded', applyMaterial); }
 
         if (target) {
           target.addEventListener('targetFound', () => {
             this.el.setAttribute('visible', true);
             video.play().catch(() => {});
           });
-
           target.addEventListener('targetLost', () => {
             this.el.setAttribute('visible', false);
             video.pause();
@@ -245,7 +282,7 @@
     loading-screen="enabled: false">
 
     <a-assets>
-      <video id="video-src" src="./katkebab.mov" muted autoplay playsinline webkit-playsinline loop preload="auto"></video>
+      <video id="video-src" src="./katkebab-stacked.mp4" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous"></video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -253,11 +290,11 @@
     <a-entity mindar-image-target="targetIndex: 0" smooth-track="factor: 0.02; posThreshold: 0.005; rotThreshold: 0.008">
       <a-plane
         id="video-plane"
-        material="shader: flat; src: #video-src;"
+        material="shader: flat; transparent: true; opacity: 1"
         width="1.6"
         height="0.9"
         position="0 0.5 0"
-        video-handler
+        alpha-video
         pinch-zoom="min: 0.5; max: 3">
       </a-plane>
     </a-entity>
