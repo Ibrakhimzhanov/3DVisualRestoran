@@ -132,16 +132,16 @@
     .dish-tab {
       flex: 1; max-width: 180px;
       padding: 10px 8px;
-      background: rgba(0,0,0,0.75);
-      border: 1.5px solid rgba(200,150,62,0.3);
+      background: transparent;
+      border: 1.5px solid rgba(200,150,62,0.2);
       border-radius: 14px;
-      color: #aaa;
       font-family: -apple-system, sans-serif;
       font-size: 13px; font-weight: 600;
       text-align: center;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
       transition: all 0.3s;
+      opacity: 0.5;
     }
     .dish-tab .tab-name {
       display: block; color: #c8963e; font-size: 14px; font-weight: 700;
@@ -152,8 +152,9 @@
     }
     .dish-tab.active {
       border-color: #c8963e;
-      background: rgba(200,150,62,0.2);
+      background: rgba(0,0,0,0.8);
       box-shadow: 0 0 12px rgba(200,150,62,0.3);
+      opacity: 1;
     }
 
     /* === Нижняя панель === */
