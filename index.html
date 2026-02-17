@@ -97,6 +97,31 @@
       }
     });
 
+    // Шейдер для stacked video (Safari) — RGB сверху, альфа-маска снизу
+    AFRAME.registerShader('stacked-alpha-video', {
+      schema: {
+        src: {type: 'map'}
+      },
+      vertexShader: [
+        'varying vec2 vUv;',
+        'void main() {',
+        '  vUv = uv;',
+        '  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+        '}'
+      ].join('\n'),
+      fragmentShader: [
+        'uniform sampler2D src;',
+        'varying vec2 vUv;',
+        'void main() {',
+        '  vec2 colorUV = vec2(vUv.x, vUv.y * 0.5 + 0.5);',
+        '  vec2 alphaUV = vec2(vUv.x, vUv.y * 0.5);',
+        '  vec4 color = texture2D(src, colorUV);',
+        '  float a = texture2D(src, alphaUV).r;',
+        '  gl_FragColor = vec4(color.rgb, a);',
+        '}'
+      ].join('\n')
+    });
+
     AFRAME.registerComponent('video-handler', {
       init: function () {
         const video = document.querySelector('#video-src');
@@ -213,7 +238,7 @@
     <a-assets>
       <video id="video-src" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous">
         <source src="./katkebab-alpha.webm" type="video/webm">
-        <source src="./katkebab.mov" type="video/quicktime">
+        <source src="./katkebab-stacked.mp4" type="video/mp4">
       </video>
     </a-assets>
 
@@ -276,6 +301,13 @@
     chefVideo.addEventListener('playing', applyChefTexture);
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || isIOS;
+
+    // Safari не поддерживает WebM VP9 с альфой — переключаем на stacked шейдер
+    if (isSafari) {
+      const videoPlane = document.getElementById('video-plane');
+      videoPlane.setAttribute('material', 'shader: stacked-alpha-video; src: #video-src; transparent: true');
+    }
 
     scene.addEventListener('arReady', () => {
       document.getElementById('loading').style.display = 'none';
