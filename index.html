@@ -97,43 +97,36 @@
       }
     });
 
-    // Stacked-alpha шейдер для Safari (raw: true = полный контроль над материалом)
-    AFRAME.registerShader('stacked-alpha', {
-      schema: {
-        src: {type: 'map'}
+    // Компонент для Safari: stacked video (RGB + маска) с прозрачностью
+    AFRAME.registerComponent('stacked-alpha', {
+      init: function () {
+        this._applied = false;
+        this._videoEl = document.querySelector('#video-src');
       },
-      raw: true,
-      init: function (data) {
-        this.material = new THREE.ShaderMaterial({
-          uniforms: { map: { value: null } },
-          vertexShader: [
-            'varying vec2 vUv;',
-            'void main() {',
-            '  vUv = uv;',
-            '  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
-            '}'
-          ].join('\n'),
-          fragmentShader: [
-            'uniform sampler2D map;',
-            'varying vec2 vUv;',
-            'void main() {',
-            '  vec2 colorUV = vec2(vUv.x, vUv.y * 0.5);',
-            '  vec2 alphaUV = vec2(vUv.x, vUv.y * 0.5 + 0.5);',
-            '  vec4 color = texture2D(map, colorUV);',
-            '  float a = smoothstep(0.05, 0.5, texture2D(map, alphaUV).r);',
-            '  gl_FragColor = vec4(color.rgb, a);',
-            '}'
-          ].join('\n'),
+      tick: function () {
+        if (this._applied) return;
+        const mesh = this.el.getObject3D('mesh');
+        if (!mesh) return;
+        if (!this._videoEl.videoWidth) return; // видео ещё не загружено
+
+        const tex = new THREE.VideoTexture(this._videoEl);
+        tex.minFilter = THREE.LinearFilter;
+        tex.magFilter = THREE.LinearFilter;
+
+        mesh.material = new THREE.ShaderMaterial({
+          uniforms: { map: { value: tex } },
+          vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+          fragmentShader: 'uniform sampler2D map; varying vec2 vUv; void main() { vec2 cUV = vec2(vUv.x, vUv.y * 0.5); vec2 aUV = vec2(vUv.x, vUv.y * 0.5 + 0.5); vec4 c = texture2D(map, cUV); float a = smoothstep(0.05, 0.5, texture2D(map, aUV).r); gl_FragColor = vec4(c.rgb, a); }',
           transparent: true,
           depthWrite: false,
           side: THREE.DoubleSide
         });
-        this.update(data);
-      },
-      update: function (data) {
-        if (data.src) {
-          this.material.uniforms.map.value = data.src;
-        }
+
+        // Отключаем A-Frame material компонент чтобы не перезаписывал
+        var matComp = this.el.components.material;
+        if (matComp) { matComp.update = function(){}; }
+
+        this._applied = true;
       }
     });
 
@@ -318,10 +311,9 @@
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || isIOS;
 
-    // Safari: переключаем шейдер на stacked-alpha (работает через A-Frame систему)
+    // Safari: добавляем компонент stacked-alpha на видео-плоскость
     if (isSafari) {
-      const videoPlane = document.getElementById('video-plane');
-      videoPlane.setAttribute('material', 'shader: stacked-alpha; src: #video-src');
+      document.getElementById('video-plane').setAttribute('stacked-alpha', '');
     }
 
     scene.addEventListener('arReady', () => {
