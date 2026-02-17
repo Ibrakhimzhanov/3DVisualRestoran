@@ -265,12 +265,21 @@
         pinch-zoom="min: 0.5; max: 3">
       </a-entity>
 
-      <!-- Видео шеф-повара — внизу, побольше -->
+      <!-- Плашка с названием блюда между видео -->
+      <a-plane
+        id="dish-label"
+        width="1.6"
+        height="0.18"
+        position="0 0.02 0"
+        material="shader: flat; color: #f5eee4; opacity: 0.92">
+      </a-plane>
+
+      <!-- Видео шеф-повара — внизу, полная ширина -->
       <a-plane
         id="chef-plane"
         material="shader: flat; color: black"
-        width="1.4"
-        height="0.8"
+        width="1.6"
+        height="0.9"
         position="0 -0.55 0">
       </a-plane>
     </a-entity>
@@ -286,6 +295,28 @@
     const iosOverlay = document.getElementById('ios-start');
     const iosBtn = document.getElementById('ios-start-btn');
     const chefPlane = document.getElementById('chef-plane');
+
+    // Плашка с названием блюда — рисуем на canvas для кириллицы
+    const labelCanvas = document.createElement('canvas');
+    labelCanvas.width = 1024;
+    labelCanvas.height = 128;
+    const ctx = labelCanvas.getContext('2d');
+    ctx.fillStyle = '#f5eee4';
+    ctx.fillRect(0, 0, 1024, 128);
+    ctx.fillStyle = '#5a2d0c';
+    ctx.font = 'bold 52px Playfair Display, Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Эт Кебаб  |  50.000 сум', 512, 64);
+
+    const labelPlane = document.getElementById('dish-label');
+    const labelTexture = new THREE.CanvasTexture(labelCanvas);
+    labelPlane.addEventListener('loaded', () => {
+      const mesh = labelPlane.getObject3D('mesh');
+      if (mesh) {
+        mesh.material = new THREE.MeshBasicMaterial({ map: labelTexture, transparent: true });
+      }
+    });
 
     // Создаём chef видео динамически (не через a-assets чтобы не блокировать загрузку)
     const chefVideo = document.createElement('video');
