@@ -412,12 +412,31 @@
     const loaderTop = document.getElementById('loader-top');
     const loaderBottom = document.getElementById('loader-bottom');
 
-    // Скрыть заглушку когда видео начинает играть
-    videoTop.addEventListener('playing', () => {
-      loaderTop.setAttribute('visible', false);
+    // Скрыть заглушку только когда видео реально рендерит кадры
+    videoTop.addEventListener('timeupdate', function handler() {
+      if (videoTop.currentTime > 0.05) {
+        loaderTop.setAttribute('visible', false);
+        videoTop.removeEventListener('timeupdate', handler);
+      }
     });
-    videoBottom.addEventListener('playing', () => {
-      loaderBottom.setAttribute('visible', false);
+    // Для повторных загрузок верхнего видео
+    videoTop.addEventListener('loadstart', () => {
+      loaderTop.setAttribute('visible', true);
+      videoTop.addEventListener('timeupdate', function h() {
+        if (videoTop.currentTime > 0.05) {
+          loaderTop.setAttribute('visible', false);
+          videoTop.removeEventListener('timeupdate', h);
+        }
+      });
+    });
+    videoBottom.addEventListener('loadstart', () => {
+      loaderBottom.setAttribute('visible', true);
+      videoBottom.addEventListener('timeupdate', function h() {
+        if (videoBottom.currentTime > 0.05) {
+          loaderBottom.setAttribute('visible', false);
+          videoBottom.removeEventListener('timeupdate', h);
+        }
+      });
     });
 
     function showLoaders() {
