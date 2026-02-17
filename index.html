@@ -97,6 +97,46 @@
       }
     });
 
+    // Stacked-alpha шейдер для Safari (raw: true = полный контроль над материалом)
+    AFRAME.registerShader('stacked-alpha', {
+      schema: {
+        src: {type: 'map'}
+      },
+      raw: true,
+      init: function (data) {
+        this.material = new THREE.ShaderMaterial({
+          uniforms: { map: { value: null } },
+          vertexShader: [
+            'varying vec2 vUv;',
+            'void main() {',
+            '  vUv = uv;',
+            '  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+            '}'
+          ].join('\n'),
+          fragmentShader: [
+            'uniform sampler2D map;',
+            'varying vec2 vUv;',
+            'void main() {',
+            '  vec2 colorUV = vec2(vUv.x, vUv.y * 0.5);',
+            '  vec2 alphaUV = vec2(vUv.x, vUv.y * 0.5 + 0.5);',
+            '  vec4 color = texture2D(map, colorUV);',
+            '  float a = smoothstep(0.05, 0.5, texture2D(map, alphaUV).r);',
+            '  gl_FragColor = vec4(color.rgb, a);',
+            '}'
+          ].join('\n'),
+          transparent: true,
+          depthWrite: false,
+          side: THREE.DoubleSide
+        });
+        this.update(data);
+      },
+      update: function (data) {
+        if (data.src) {
+          this.material.uniforms.map.value = data.src;
+        }
+      }
+    });
+
     AFRAME.registerComponent('video-handler', {
       init: function () {
         const video = document.querySelector('#video-src');
@@ -278,52 +318,10 @@
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || isIOS;
 
-    // Safari: stacked video (RGB сверху + маска снизу) → кастомный ShaderMaterial
+    // Safari: переключаем шейдер на stacked-alpha (работает через A-Frame систему)
     if (isSafari) {
-      function applyStackedMaterial() {
-        const videoPlane = document.getElementById('video-plane');
-        const mesh = videoPlane.getObject3D('mesh');
-        if (!mesh || mesh._stackedApplied) return;
-
-        const tex = new THREE.VideoTexture(video);
-        tex.minFilter = THREE.LinearFilter;
-        tex.magFilter = THREE.LinearFilter;
-
-        mesh.material = new THREE.ShaderMaterial({
-          uniforms: { map: { value: tex } },
-          vertexShader: [
-            'varying vec2 vUv;',
-            'void main() {',
-            '  vUv = uv;',
-            '  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
-            '}'
-          ].join('\n'),
-          fragmentShader: [
-            'uniform sampler2D map;',
-            'varying vec2 vUv;',
-            'void main() {',
-            '  vec2 colorUV = vec2(vUv.x, vUv.y * 0.5);',
-            '  vec2 alphaUV = vec2(vUv.x, vUv.y * 0.5 + 0.5);',
-            '  vec4 color = texture2D(map, colorUV);',
-            '  float a = smoothstep(0.05, 0.5, texture2D(map, alphaUV).r);',
-            '  gl_FragColor = vec4(color.rgb, a);',
-            '}'
-          ].join('\n'),
-          transparent: true,
-          depthWrite: false,
-          side: THREE.DoubleSide
-        });
-        mesh._stackedApplied = true;
-      }
-
-      // Пробуем сразу + по интервалу (mesh может быть не готов)
-      const stackedInterval = setInterval(() => {
-        applyStackedMaterial();
-        const vp = document.getElementById('video-plane');
-        if (vp && vp.getObject3D('mesh') && vp.getObject3D('mesh')._stackedApplied) {
-          clearInterval(stackedInterval);
-        }
-      }, 300);
+      const videoPlane = document.getElementById('video-plane');
+      videoPlane.setAttribute('material', 'shader: stacked-alpha; src: #video-src');
     }
 
     scene.addEventListener('arReady', () => {
