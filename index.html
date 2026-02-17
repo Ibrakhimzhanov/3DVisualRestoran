@@ -378,6 +378,8 @@
           { name: 'Жаркое',  price: '360.-', video: './dish-video.mp4' },
           { name: 'Стейк',   price: '180.-', video: './chef.mp4' },
           { name: 'Салат',    price: '45.-',  video: './chef.mp4' },
+          { name: 'Кола',    price: '15.-',  video: './dish-video.mp4' },
+          { name: 'Десерт',  price: '55.-',  video: './chef.mp4' },
         ]
       },
       {
@@ -445,9 +447,14 @@
     }
 
     function loadBottomVideo(src) {
-      loaderBottom.setAttribute('visible', true);
-      videoBottom.src = src;
-      videoBottom.load();
+      const fullSrc = new URL(src, location.href).href;
+      const changed = videoBottom.src !== fullSrc;
+      if (changed) {
+        loaderBottom.setAttribute('visible', true);
+        videoBottom.src = src;
+        videoBottom.load();
+      }
+      videoBottom.currentTime = 0;
       videoBottom.play().catch(() => {});
 
       const mesh = bottomPlane.getObject3D('mesh');
@@ -492,9 +499,13 @@
         t.classList.toggle('active', i === idx);
       });
 
-      // Верхнее видео
-      loaderTop.setAttribute('visible', true);
-      videoTop.src = dish.topVideo;
+      // Верхнее видео — не перезагружать если тот же src
+      const topSrc = new URL(dish.topVideo, location.href).href;
+      if (videoTop.src !== topSrc) {
+        loaderTop.setAttribute('visible', true);
+        videoTop.src = dish.topVideo;
+        videoTop.load();
+      }
       videoTop.currentTime = 0;
       videoTop.play().catch(() => {});
 
@@ -590,11 +601,25 @@
     topPlane.setAttribute('visible', false);
     bottomPlane.setAttribute('visible', false);
 
+    let firstFound = true;
     targetEl.addEventListener('targetFound', () => {
       topPlane.setAttribute('visible', true);
       bottomPlane.setAttribute('visible', true);
       dishSelector.style.display = 'block';
-      selectDish(0);
+
+      if (firstFound) {
+        selectDish(0);
+        firstFound = false;
+      } else {
+        // Видео уже загружено — просто play
+        videoTop.currentTime = 0;
+        videoTop.play().catch(() => {});
+        videoBottom.currentTime = 0;
+        videoBottom.play().catch(() => {});
+        loaderTop.setAttribute('visible', false);
+        loaderBottom.setAttribute('visible', false);
+        bottomBar.style.display = 'block';
+      }
     });
 
     targetEl.addEventListener('targetLost', () => {
