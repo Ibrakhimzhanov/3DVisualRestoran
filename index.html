@@ -255,32 +255,40 @@
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0" smooth-track="factor: 0.02; posThreshold: 0.005; rotThreshold: 0.008">
-      <!-- Видео блюда (прозрачное) — чуть ниже -->
+      <!-- Видео блюда (прозрачное) — верхний слой -->
       <a-entity
         id="video-plane"
         geometry="primitive: plane; width: 1.6; height: 0.9"
         material="shader: transparent-video; src: #video-src"
-        position="0 0.55 0"
+        position="0 0.55 0.03"
         video-handler
         pinch-zoom="min: 0.5; max: 3">
       </a-entity>
 
+      <!-- Тень под плашкой -->
+      <a-plane
+        width="1.7"
+        height="0.26"
+        position="0 0.02 0.005"
+        material="shader: flat; color: #3a1a00; opacity: 0.25; side: double">
+      </a-plane>
+
       <!-- Плашка с названием блюда между видео -->
       <a-plane
         id="dish-label"
-        width="1.6"
-        height="0.18"
-        position="0 0.02 0"
-        material="shader: flat; color: #f5eee4; opacity: 0.92">
+        width="1.65"
+        height="0.22"
+        position="0 0.02 0.01"
+        material="shader: flat; color: #f5eee4; opacity: 0.95; side: double">
       </a-plane>
 
-      <!-- Видео шеф-повара — внизу, полная ширина -->
+      <!-- Видео шеф-повара — внизу, большое -->
       <a-plane
         id="chef-plane"
-        material="shader: flat; color: black"
-        width="1.6"
-        height="0.9"
-        position="0 -0.55 0">
+        material="shader: flat; color: black; side: double"
+        width="2.2"
+        height="1.24"
+        position="0 -0.75 0.005">
       </a-plane>
     </a-entity>
 
@@ -299,24 +307,52 @@
     // Плашка с названием блюда — рисуем на canvas для кириллицы
     const labelCanvas = document.createElement('canvas');
     labelCanvas.width = 1024;
-    labelCanvas.height = 128;
+    labelCanvas.height = 140;
     const ctx = labelCanvas.getContext('2d');
-    ctx.fillStyle = '#f5eee4';
-    ctx.fillRect(0, 0, 1024, 128);
+    // Фон с лёгким градиентом
+    const grad = ctx.createLinearGradient(0, 0, 0, 140);
+    grad.addColorStop(0, '#f7f0e6');
+    grad.addColorStop(1, '#efe5d6');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 1024, 140);
+    // Тонкая линия сверху и снизу
+    ctx.strokeStyle = 'rgba(160,100,60,0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(80, 2); ctx.lineTo(944, 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(80, 138); ctx.lineTo(944, 138); ctx.stroke();
+    // Текст
     ctx.fillStyle = '#5a2d0c';
-    ctx.font = 'bold 52px Playfair Display, Georgia, serif';
+    ctx.font = 'bold 56px Playfair Display, Georgia, serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('Эт Кебаб  |  50.000 сум', 512, 64);
+    ctx.fillText('Эт Кебаб', 380, 70);
+    // Разделитель
+    ctx.fillStyle = 'rgba(138,94,60,0.4)';
+    ctx.fillText('·', 530, 66);
+    // Цена
+    ctx.fillStyle = '#7a3b10';
+    ctx.font = 'bold 48px Playfair Display, Georgia, serif';
+    ctx.fillText('50.000 сум', 700, 70);
 
     const labelPlane = document.getElementById('dish-label');
     const labelTexture = new THREE.CanvasTexture(labelCanvas);
-    labelPlane.addEventListener('loaded', () => {
+    function applyLabelTexture() {
       const mesh = labelPlane.getObject3D('mesh');
-      if (mesh) {
+      if (mesh && !mesh._labelApplied) {
         mesh.material = new THREE.MeshBasicMaterial({ map: labelTexture, transparent: true });
+        mesh._labelApplied = true;
+        return true;
       }
-    });
+      return false;
+    }
+    // Попытка сразу, если уже загружен
+    if (!applyLabelTexture()) {
+      // Если mesh ещё не готов — пробуем через loaded и через интервал
+      labelPlane.addEventListener('loaded', applyLabelTexture);
+      const labelInterval = setInterval(() => {
+        if (applyLabelTexture()) clearInterval(labelInterval);
+      }, 200);
+    }
 
     // Создаём chef видео динамически (не через a-assets чтобы не блокировать загрузку)
     const chefVideo = document.createElement('video');
