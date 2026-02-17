@@ -249,12 +249,11 @@
     device-orientation-permission-ui="enabled: false"
     loading-screen="enabled: false">
 
-    <a-assets>
+    <a-assets timeout="5000">
       <video id="video-src" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous">
         <source src="./katkebab-alpha.webm" type="video/webm">
         <source src="./katkebab.mov" type="video/quicktime">
       </video>
-      <video id="chef-src" src="./chef.mp4" muted playsinline webkit-playsinline loop preload="metadata" crossorigin="anonymous"></video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -273,11 +272,10 @@
       <!-- Видео шеф-повара — внизу, побольше -->
       <a-plane
         id="chef-plane"
-        material="shader: flat; src: #chef-src"
+        material="shader: flat; color: black"
         width="1.8"
         height="1.0"
-        position="0 -0.6 0"
-        video-handler>
+        position="0 -0.6 0">
       </a-plane>
     </a-entity>
 
@@ -285,16 +283,33 @@
 
   <script>
     const video = document.querySelector('#video-src');
-    const chefVideo = document.querySelector('#chef-src');
     const soundBtn = document.getElementById('sound-btn');
     const scene = document.querySelector('a-scene');
     const dishInfo = document.getElementById('dish-info');
     const bottomBar = document.getElementById('bottom-bar');
     const iosOverlay = document.getElementById('ios-start');
     const iosBtn = document.getElementById('ios-start-btn');
+    const chefPlane = document.getElementById('chef-plane');
 
-    // Шеф-повар всегда без звука
+    // Создаём chef видео динамически (не через a-assets чтобы не блокировать загрузку)
+    const chefVideo = document.createElement('video');
+    chefVideo.src = './chef.mp4';
     chefVideo.muted = true;
+    chefVideo.loop = true;
+    chefVideo.playsInline = true;
+    chefVideo.setAttribute('webkit-playsinline', '');
+    chefVideo.crossOrigin = 'anonymous';
+    chefVideo.preload = 'metadata';
+
+    // Привязка chef видео к плоскости после загрузки
+    chefVideo.addEventListener('loadeddata', () => {
+      const texture = new THREE.VideoTexture(chefVideo);
+      texture.minFilter = THREE.LinearFilter;
+      const mesh = chefPlane.getObject3D('mesh');
+      if (mesh) {
+        mesh.material = new THREE.MeshBasicMaterial({ map: texture });
+      }
+    });
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
@@ -327,6 +342,7 @@
       target.addEventListener('targetFound', () => {
         dishInfo.style.display = 'block';
         bottomBar.style.display = 'block';
+        chefPlane.setAttribute('visible', true);
         video.play().catch(() => {});
         chefVideo.play().catch(() => {});
       });
@@ -334,6 +350,7 @@
       target.addEventListener('targetLost', () => {
         dishInfo.style.display = 'none';
         bottomBar.style.display = 'none';
+        chefPlane.setAttribute('visible', false);
       });
     });
   </script>
