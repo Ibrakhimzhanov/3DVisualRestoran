@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MindAR Target Compiler</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+    h1 { color: #333; }
+    #status { padding: 15px; background: #f0f0f0; border-radius: 8px; margin: 20px 0; white-space: pre-line; }
+    #download { display: none; padding: 12px 24px; background: #b43214; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+    #download:hover { background: #8a2610; }
+    .preview { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+    .preview img { max-width: 200px; border: 2px solid #ccc; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>MindAR Target Compiler</h1>
+  <p>Выберите картинки (каждая = отдельный target). Порядок важен: target 0, target 1, ...</p>
+
+  <input type="file" id="fileInput" accept="image/*" multiple>
+  <div class="preview" id="preview"></div>
+  <progress id="progress" value="0" max="100" style="width:100%;height:20px;margin:10px 0;"></progress>
+  <div id="status">Ожидание файлов...</div>
+  <button id="download">Скачать targets.mind</button>
+
+  <script type="module">
+    import { Compiler } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js';
+
+    const fileInput = document.getElementById('fileInput');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const downloadBtn = document.getElementById('download');
+    const previewDiv = document.getElementById('preview');
+    let compiledData = null;
+
+    fileInput.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+
+      previewDiv.innerHTML = '';
+      status.textContent = `Загрузка ${files.length} изображений...`;
+
+      const images = [];
+      for (let i = 0; i < files.length; i++) {
+        const img = new Image();
+        img.src = URL.createObjectURL(files[i]);
+        await new Promise(r => img.onload = r);
+        images.push(img);
+
+        const preview = img.cloneNode();
+        preview.title = `Target ${i}: ${files[i].name}`;
+        previewDiv.appendChild(preview);
+      }
+
+      try {
+        status.textContent = `${images.length} изображений загружено. Компиляция...`;
+
+        const compiler = new Compiler();
+        await compiler.compileImageTargets(images, (p) => {
+          progress.value = p;
+          status.textContent = `Компиляция: ${Math.round(p)}%`;
+        });
+
+        compiledData = await compiler.exportData();
+        status.textContent = `Готово! ${images.length} таргетов скомпилировано.\nНажмите "Скачать targets.mind"`;
+        downloadBtn.style.display = 'inline-block';
+      } catch(err) {
+        status.textContent = 'Ошибка: ' + err.message;
+        console.error(err);
+      }
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (!compiledData) return;
+      const blob = new Blob([compiledData]);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'targets.mind';
+      a.click();
+    });
+  </script>
+</body>
+</html>

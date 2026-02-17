@@ -34,7 +34,6 @@
           return;
         }
 
-        // Dead zone: ignore micro-movements
         const posDelta = obj.position.distanceTo(this.prevRawPos);
         const rotDelta = this.prevRawQuat.angleTo(obj.quaternion);
 
@@ -55,7 +54,7 @@
       }
     });
 
-    // Pinch-to-zoom — масштабирование видео двумя пальцами
+    // Pinch-to-zoom
     AFRAME.registerComponent('pinch-zoom', {
       schema: {
         min: {type: 'number', default: 0.5},
@@ -95,31 +94,10 @@
         return Math.sqrt(dx * dx + dy * dy);
       }
     });
-
-    AFRAME.registerComponent('video-handler', {
-      init: function () {
-        const video = document.querySelector('#video-top');
-        const target = this.el.closest('[mindar-image-target]');
-        this.el.setAttribute('visible', false);
-
-        if (target) {
-          target.addEventListener('targetFound', () => {
-            this.el.setAttribute('visible', true);
-            video.play().catch(() => {});
-          });
-
-          target.addEventListener('targetLost', () => {
-            this.el.setAttribute('visible', false);
-            video.pause();
-          });
-        }
-      }
-    });
   </script>
   <style>
     body { margin: 0; overflow: hidden; }
 
-    /* Принудительно скрыть VR кнопку A-Frame */
     .a-enter-vr, .a-enter-ar,
     [aframe-injected] { display: none !important; }
 
@@ -194,7 +172,7 @@
       100% { transform: translateX(-50%) scale(1); filter: drop-shadow(0 0 4px rgba(200,150,62,0.3)); }
     }
 
-    /* Кнопка звука — справа от логотипа */
+    /* Кнопка звука */
     #sound-btn {
       position: absolute; right: 20px; bottom: 12px;
       width: 42px; height: 42px;
@@ -276,18 +254,12 @@
 
   <div id="bottom-bar">
     <div id="dish-label">
-      <span class="dish-name">Стейк</span>
+      <span class="dish-name"></span>
       <span class="dish-sep">·</span>
-      <span class="dish-price">180 000 сум</span>
+      <span class="dish-price"></span>
     </div>
 
-    <div id="food-menu">
-      <div class="food-item active" data-index="0"><span>Стейк</span></div>
-      <div class="food-item" data-index="1"><span>Салат</span></div>
-      <div class="food-item" data-index="2"><span>Кола</span></div>
-      <div class="food-item" data-index="3"><span>Махи</span></div>
-      <div class="food-item" data-index="4"><span>Десерт</span></div>
-    </div>
+    <div id="food-menu"></div>
 
     <div id="logo"><img src="./logomu.png" alt="MUU Steak House"></div>
     <button id="sound-btn"><span class="icon">🔇</span></button>
@@ -309,24 +281,36 @@
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <a-entity mindar-image-target="targetIndex: 0" smooth-track="factor: 0.02; posThreshold: 0.005; rotThreshold: 0.008">
-      <!-- Видео 1 (верх) — mu2.mp4, без звука -->
+    <!-- Target 0: Жаркое из телятины -->
+    <a-entity id="target-0" mindar-image-target="targetIndex: 0" smooth-track="factor: 0.02; posThreshold: 0.005; rotThreshold: 0.008">
       <a-plane
-        id="video-top-plane"
+        class="video-top-plane"
         material="shader: flat; src: #video-top; side: double"
-        width="2.2"
-        height="1.24"
+        width="2.2" height="1.24"
         position="0 0.68 0.01"
-        video-handler
         pinch-zoom="min: 0.5; max: 3">
       </a-plane>
-
-      <!-- Видео 2 (низ) — dish-video.mp4, со звуком -->
       <a-plane
-        id="video-bottom-plane"
+        class="video-bottom-plane"
         material="shader: flat; color: black; side: double"
-        width="2.2"
-        height="1.24"
+        width="2.2" height="1.24"
+        position="0 -0.68 0.005">
+      </a-plane>
+    </a-entity>
+
+    <!-- Target 1: Каре ягнёнка -->
+    <a-entity id="target-1" mindar-image-target="targetIndex: 1" smooth-track="factor: 0.02; posThreshold: 0.005; rotThreshold: 0.008">
+      <a-plane
+        class="video-top-plane"
+        material="shader: flat; src: #video-top; side: double"
+        width="2.2" height="1.24"
+        position="0 0.68 0.01"
+        pinch-zoom="min: 0.5; max: 3">
+      </a-plane>
+      <a-plane
+        class="video-bottom-plane"
+        material="shader: flat; color: black; side: double"
+        width="2.2" height="1.24"
         position="0 -0.68 0.005">
       </a-plane>
     </a-entity>
@@ -334,13 +318,27 @@
   </a-scene>
 
   <script>
-    // === Данные меню (видео + цены) ===
-    const menuItems = [
-      { name: 'Стейк',  price: '180 000 сум', video: './dish-video.mp4' },
-      { name: 'Салат',   price: '45 000 сум',  video: './chef.mp4' },
-      { name: 'Кола',    price: '15 000 сум',  video: './chef.mp4' },
-      { name: 'Махи',    price: '65 000 сум',  video: './dish-video.mp4' },
-      { name: 'Десерт',  price: '55 000 сум',  video: './chef.mp4' },
+    // === Конфигурация двух таргетов ===
+    // Каждый таргет: своё верхнее видео (готовое блюдо) + свои пункты меню с нижними видео
+    const targets = [
+      {
+        id: 'target-0',
+        topVideo: './mu2.mp4',        // готовое жаркое
+        menuItems: [
+          { name: 'Жаркое',   price: '360 000 сум', video: './dish-video.mp4' },
+          { name: 'Стейк',    price: '180 000 сум', video: './chef.mp4' },
+          { name: 'Салат',     price: '45 000 сум',  video: './chef.mp4' },
+        ]
+      },
+      {
+        id: 'target-1',
+        topVideo: './mu2.mp4',        // готовое каре
+        menuItems: [
+          { name: 'Каре',     price: '690 000 сум', video: './dish-video.mp4' },
+          { name: 'Махи',     price: '65 000 сум',  video: './chef.mp4' },
+          { name: 'Десерт',   price: '55 000 сум',  video: './chef.mp4' },
+        ]
+      }
     ];
 
     const videoTop = document.querySelector('#video-top');
@@ -349,17 +347,15 @@
     const bottomBar = document.getElementById('bottom-bar');
     const iosOverlay = document.getElementById('ios-start');
     const iosBtn = document.getElementById('ios-start-btn');
-    const bottomPlane = document.getElementById('video-bottom-plane');
     const foodMenu = document.getElementById('food-menu');
-    const foodItems = document.querySelectorAll('.food-item');
     const dishNameEl = document.querySelector('.dish-name');
     const dishPriceEl = document.querySelector('.dish-price');
     const soundBtn = document.getElementById('sound-btn');
 
     let menuOpen = false;
-    let currentIndex = 0;
+    let activeTarget = null;  // какой таргет сейчас виден
 
-    // Нижнее видео — динамическое
+    // Нижнее видео — динамическое (общее для обоих таргетов)
     const videoBottom = document.createElement('video');
     videoBottom.muted = true;
     videoBottom.loop = true;
@@ -368,12 +364,11 @@
     videoBottom.crossOrigin = 'anonymous';
     videoBottom.preload = 'auto';
 
-    function loadBottomVideo(src) {
+    function loadBottomVideo(src, bottomPlane) {
       videoBottom.src = src;
       videoBottom.load();
       videoBottom.play().catch(() => {});
 
-      // Обновляем текстуру
       const mesh = bottomPlane.getObject3D('mesh');
       if (mesh) {
         const texture = new THREE.VideoTexture(videoBottom);
@@ -382,36 +377,65 @@
       }
     }
 
-    // Первая загрузка
-    videoBottom.src = menuItems[0].video;
-    videoBottom.load();
-
-    function applyBottomTexture() {
+    function applyBottomTexture(bottomPlane) {
       const mesh = bottomPlane.getObject3D('mesh');
-      if (mesh && !mesh._applied) {
+      if (mesh) {
         const texture = new THREE.VideoTexture(videoBottom);
         texture.minFilter = THREE.LinearFilter;
         mesh.material = new THREE.MeshBasicMaterial({ map: texture });
-        mesh._applied = true;
       }
     }
-    videoBottom.addEventListener('loadeddata', applyBottomTexture);
-    videoBottom.addEventListener('playing', applyBottomTexture);
 
-    // === Радиальное меню ===
-    // Расположение по полукругу сверху
-    const radius = 90;
-    const startAngle = -180;  // слева
-    const endAngle = 0;    // справа
-    foodItems.forEach((item, i) => {
-      const angle = startAngle + (endAngle - startAngle) * i / (foodItems.length - 1);
-      const rad = angle * Math.PI / 180;
-      const x = Math.cos(rad) * radius;
-      const y = Math.sin(rad) * radius;
-      item.style.left = (x - 28) + 'px';
-      item.style.top = (y - 28) + 'px';
-      item.style.transitionDelay = (i * 0.05) + 's';
-    });
+    // Строим радиальное меню для активного таргета
+    function buildMenu(targetConfig, bottomPlane) {
+      // Очистить старое меню
+      foodMenu.innerHTML = '';
+      foodMenu.classList.remove('open');
+      menuOpen = false;
+      logo.classList.remove('menu-open');
+
+      const items = targetConfig.menuItems;
+      const radius = 90;
+      const startAngle = -180;
+      const endAngle = 0;
+
+      items.forEach((item, i) => {
+        const div = document.createElement('div');
+        div.className = 'food-item' + (i === 0 ? ' active' : '');
+        div.dataset.index = i;
+        div.innerHTML = `<span>${item.name}</span>`;
+
+        const count = items.length > 1 ? items.length - 1 : 1;
+        const angle = startAngle + (endAngle - startAngle) * i / count;
+        const rad = angle * Math.PI / 180;
+        const x = Math.cos(rad) * radius;
+        const y = Math.sin(rad) * radius;
+        div.style.left = (x - 28) + 'px';
+        div.style.top = (y - 28) + 'px';
+        div.style.transitionDelay = (i * 0.05) + 's';
+
+        div.addEventListener('click', (e) => {
+          e.stopPropagation();
+          foodMenu.querySelectorAll('.food-item').forEach(fi => fi.classList.remove('active'));
+          div.classList.add('active');
+
+          dishNameEl.textContent = item.name;
+          dishPriceEl.textContent = item.price;
+          loadBottomVideo(item.video, bottomPlane);
+
+          menuOpen = false;
+          foodMenu.classList.remove('open');
+          logo.classList.remove('menu-open');
+        });
+
+        foodMenu.appendChild(div);
+      });
+
+      // Установить первый пункт
+      dishNameEl.textContent = items[0].name;
+      dishPriceEl.textContent = items[0].price;
+      loadBottomVideo(items[0].video, bottomPlane);
+    }
 
     // Логотип → открыть/закрыть меню
     logo.addEventListener('click', (e) => {
@@ -419,31 +443,6 @@
       menuOpen = !menuOpen;
       foodMenu.classList.toggle('open', menuOpen);
       logo.classList.toggle('menu-open', menuOpen);
-    });
-
-    // Выбор блюда
-    foodItems.forEach((item) => {
-      item.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const idx = parseInt(item.dataset.index);
-        currentIndex = idx;
-
-        // Обновить активный элемент
-        foodItems.forEach(fi => fi.classList.remove('active'));
-        item.classList.add('active');
-
-        // Обновить название и цену
-        dishNameEl.textContent = menuItems[idx].name;
-        dishPriceEl.textContent = menuItems[idx].price;
-
-        // Сменить видео
-        loadBottomVideo(menuItems[idx].video);
-
-        // Закрыть меню
-        menuOpen = false;
-        foodMenu.classList.remove('open');
-        logo.classList.remove('menu-open');
-      });
     });
 
     // Закрыть меню при тапе вне
@@ -477,27 +476,39 @@
             iosOverlay.style.display = 'none';
           });
         });
-      } else {
-        videoTop.play().catch(() => {});
-        videoBottom.play().catch(() => {});
       }
     });
 
-    document.querySelectorAll('[mindar-image-target]').forEach((target) => {
-      target.addEventListener('targetFound', () => {
+    // === Обработка targetFound / targetLost для каждого таргета ===
+    targets.forEach((cfg) => {
+      const targetEl = document.getElementById(cfg.id);
+      const bottomPlane = targetEl.querySelector('.video-bottom-plane');
+
+      targetEl.addEventListener('targetFound', () => {
+        activeTarget = cfg;
+
+        // Верхнее видео
+        videoTop.src = cfg.topVideo;
+        videoTop.currentTime = 0;
+        videoTop.play().catch(() => {});
+
+        // Построить меню для этого блюда
+        buildMenu(cfg, bottomPlane);
+
         bottomBar.style.display = 'block';
         bottomPlane.setAttribute('visible', true);
-        videoTop.currentTime = 0;
-        videoBottom.currentTime = 0;
-        videoTop.play().catch(() => {});
-        videoBottom.play().catch(() => {});
       });
 
-      target.addEventListener('targetLost', () => {
+      targetEl.addEventListener('targetLost', () => {
         bottomBar.style.display = 'none';
         bottomPlane.setAttribute('visible', false);
         videoTop.pause();
         videoBottom.pause();
+
+        menuOpen = false;
+        foodMenu.classList.remove('open');
+        logo.classList.remove('menu-open');
+        activeTarget = null;
       });
     });
   </script>
