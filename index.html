@@ -98,7 +98,7 @@
 
     AFRAME.registerComponent('video-handler', {
       init: function () {
-        const video = document.querySelector('#video-src');
+        const video = document.querySelector('#video-top');
         const target = this.el.closest('[mindar-image-target]');
         this.el.setAttribute('visible', false);
 
@@ -243,18 +243,18 @@
     loading-screen="enabled: false">
 
     <a-assets>
-      <video id="video-src" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous"
-        src="./dish-video.mp4">
+      <video id="video-top" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous"
+        src="./mu2.mp4">
       </video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0" smooth-track="factor: 0.02; posThreshold: 0.005; rotThreshold: 0.008">
-      <!-- Видео блюда — обычное видео -->
+      <!-- Видео 1 (верх) — mu2.mp4, без звука -->
       <a-plane
-        id="video-plane"
-        material="shader: flat; src: #video-src; side: double"
+        id="video-top-plane"
+        material="shader: flat; src: #video-top; side: double"
         width="2.2"
         height="1.24"
         position="0 0.68 0.01"
@@ -262,9 +262,9 @@
         pinch-zoom="min: 0.5; max: 3">
       </a-plane>
 
-      <!-- Видео шеф-повара — внизу, такой же размер -->
+      <!-- Видео 2 (низ) — dish-video.mp4, со звуком -->
       <a-plane
-        id="chef-plane"
+        id="video-bottom-plane"
         material="shader: flat; color: black; side: double"
         width="2.2"
         height="1.24"
@@ -275,37 +275,37 @@
   </a-scene>
 
   <script>
-    const video = document.querySelector('#video-src');
+    const videoTop = document.querySelector('#video-top');
     const logo = document.getElementById('logo');
     const scene = document.querySelector('a-scene');
     const bottomBar = document.getElementById('bottom-bar');
     const iosOverlay = document.getElementById('ios-start');
     const iosBtn = document.getElementById('ios-start-btn');
-    const chefPlane = document.getElementById('chef-plane');
+    const bottomPlane = document.getElementById('video-bottom-plane');
 
-    // Создаём chef видео динамически (не через a-assets чтобы не блокировать загрузку)
-    const chefVideo = document.createElement('video');
-    chefVideo.src = './chef.mp4';
-    chefVideo.muted = true;
-    chefVideo.loop = true;
-    chefVideo.playsInline = true;
-    chefVideo.setAttribute('webkit-playsinline', '');
-    chefVideo.crossOrigin = 'anonymous';
-    chefVideo.preload = 'auto';
-    chefVideo.load();
+    // Видео 2 (нижнее, со звуком) — загружаем динамически
+    const videoBottom = document.createElement('video');
+    videoBottom.src = './dish-video.mp4';
+    videoBottom.muted = true;
+    videoBottom.loop = true;
+    videoBottom.playsInline = true;
+    videoBottom.setAttribute('webkit-playsinline', '');
+    videoBottom.crossOrigin = 'anonymous';
+    videoBottom.preload = 'auto';
+    videoBottom.load();
 
-    // Привязка chef видео к плоскости
-    function applyChefTexture() {
-      const mesh = chefPlane.getObject3D('mesh');
-      if (mesh && !mesh._chefApplied) {
-        const texture = new THREE.VideoTexture(chefVideo);
+    // Привязка нижнего видео к плоскости
+    function applyBottomTexture() {
+      const mesh = bottomPlane.getObject3D('mesh');
+      if (mesh && !mesh._applied) {
+        const texture = new THREE.VideoTexture(videoBottom);
         texture.minFilter = THREE.LinearFilter;
         mesh.material = new THREE.MeshBasicMaterial({ map: texture });
-        mesh._chefApplied = true;
+        mesh._applied = true;
       }
     }
-    chefVideo.addEventListener('loadeddata', applyChefTexture);
-    chefVideo.addEventListener('playing', applyChefTexture);
+    videoBottom.addEventListener('loadeddata', applyBottomTexture);
+    videoBottom.addEventListener('playing', applyBottomTexture);
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     scene.addEventListener('arReady', () => {
@@ -314,36 +314,36 @@
       if (isIOS) {
         iosOverlay.style.display = 'flex';
         iosBtn.addEventListener('click', () => {
-          video.muted = true;
-          video.play().then(() => {
-            chefVideo.play().catch(() => {});
+          videoTop.play().then(() => {
+            videoBottom.play().catch(() => {});
             iosOverlay.style.display = 'none';
           }).catch(() => {
             iosOverlay.style.display = 'none';
           });
         });
       } else {
-        video.play().catch(() => {});
-        chefVideo.play().catch(() => {});
+        videoTop.play().catch(() => {});
+        videoBottom.play().catch(() => {});
       }
     });
 
+    // Логотип = кнопка звука (управляет нижним видео)
     logo.addEventListener('click', () => {
-      video.muted = !video.muted;
-      logo.classList.toggle('sound-on', !video.muted);
+      videoBottom.muted = !videoBottom.muted;
+      logo.classList.toggle('sound-on', !videoBottom.muted);
     });
 
     document.querySelectorAll('[mindar-image-target]').forEach((target) => {
       target.addEventListener('targetFound', () => {
         bottomBar.style.display = 'block';
-        chefPlane.setAttribute('visible', true);
-        video.play().catch(() => {});
-        chefVideo.play().catch(() => {});
+        bottomPlane.setAttribute('visible', true);
+        videoTop.play().catch(() => {});
+        videoBottom.play().catch(() => {});
       });
 
       target.addEventListener('targetLost', () => {
         bottomBar.style.display = 'none';
-        chefPlane.setAttribute('visible', false);
+        bottomPlane.setAttribute('visible', false);
       });
     });
   </script>
