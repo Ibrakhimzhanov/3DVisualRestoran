@@ -100,9 +100,13 @@
 
     AFRAME.registerComponent('video-handler', {
       init: function () {
-        const video = document.querySelector('#video-src');
         const target = this.el.closest('[mindar-image-target]');
         this.el.setAttribute('visible', false);
+
+        // Определяем какое видео привязано к этому элементу
+        const matSrc = this.el.getAttribute('material');
+        const isChef = matSrc && matSrc.includes('chef-src');
+        const video = document.querySelector(isChef ? '#chef-src' : '#video-src');
 
         if (target) {
           target.addEventListener('targetFound', () => {
@@ -250,31 +254,47 @@
         <source src="./katkebab-alpha.webm" type="video/webm">
         <source src="./katkebab.mov" type="video/quicktime">
       </video>
+      <video id="chef-src" src="./chef.mp4" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous"></video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0" smooth-track="factor: 0.02; posThreshold: 0.005; rotThreshold: 0.008">
+      <!-- Видео блюда (прозрачное) — чуть ниже -->
       <a-entity
         id="video-plane"
         geometry="primitive: plane; width: 1.6; height: 0.9"
         material="shader: transparent-video; src: #video-src"
-        position="0 0.5 0"
+        position="0 0.25 0"
         video-handler
         pinch-zoom="min: 0.5; max: 3">
       </a-entity>
+
+      <!-- Видео шеф-повара — внизу, побольше -->
+      <a-plane
+        id="chef-plane"
+        material="shader: flat; src: #chef-src"
+        width="1.8"
+        height="1.0"
+        position="0 -0.6 0"
+        video-handler>
+      </a-plane>
     </a-entity>
 
   </a-scene>
 
   <script>
     const video = document.querySelector('#video-src');
+    const chefVideo = document.querySelector('#chef-src');
     const soundBtn = document.getElementById('sound-btn');
     const scene = document.querySelector('a-scene');
     const dishInfo = document.getElementById('dish-info');
     const bottomBar = document.getElementById('bottom-bar');
     const iosOverlay = document.getElementById('ios-start');
     const iosBtn = document.getElementById('ios-start-btn');
+
+    // Шеф-повар всегда без звука
+    chefVideo.muted = true;
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
@@ -286,6 +306,7 @@
         iosBtn.addEventListener('click', () => {
           video.muted = true;
           video.play().then(() => {
+            chefVideo.play().catch(() => {});
             iosOverlay.style.display = 'none';
           }).catch(() => {
             iosOverlay.style.display = 'none';
@@ -293,6 +314,7 @@
         });
       } else {
         video.play().catch(() => {});
+        chefVideo.play().catch(() => {});
       }
     });
 
@@ -306,6 +328,7 @@
         dishInfo.style.display = 'block';
         bottomBar.style.display = 'block';
         video.play().catch(() => {});
+        chefVideo.play().catch(() => {});
       });
 
       target.addEventListener('targetLost', () => {
