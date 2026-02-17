@@ -119,13 +119,49 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Нижняя панель */
+    /* === Верхняя панель выбора блюда === */
+    #dish-selector {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 200; display: none;
+      padding: 12px 10px 10px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+    }
+    #dish-selector .dishes {
+      display: flex; gap: 8px; justify-content: center;
+    }
+    .dish-tab {
+      flex: 1; max-width: 180px;
+      padding: 10px 8px;
+      background: rgba(0,0,0,0.75);
+      border: 1.5px solid rgba(200,150,62,0.3);
+      border-radius: 14px;
+      color: #aaa;
+      font-family: -apple-system, sans-serif;
+      font-size: 13px; font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.3s;
+    }
+    .dish-tab .tab-name {
+      display: block; color: #c8963e; font-size: 14px; font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .dish-tab .tab-price {
+      display: block; color: #e8c76a; font-size: 12px; font-weight: 600;
+    }
+    .dish-tab.active {
+      border-color: #c8963e;
+      background: rgba(200,150,62,0.2);
+      box-shadow: 0 0 12px rgba(200,150,62,0.3);
+    }
+
+    /* === Нижняя панель === */
     #bottom-bar {
       position: fixed; bottom: 20px; left: 0; right: 0;
       z-index: 100; display: none;
     }
 
-    /* Плашка блюда + цена */
     #dish-label {
       position: absolute; left: 50%; transform: translateX(-50%);
       bottom: 76px;
@@ -152,7 +188,6 @@
       color: #e8c76a;
     }
 
-    /* Логотип MUU — центр */
     #logo {
       position: absolute; left: 50%; transform: translateX(-50%); bottom: 0;
       cursor: pointer;
@@ -172,7 +207,6 @@
       100% { transform: translateX(-50%) scale(1); filter: drop-shadow(0 0 4px rgba(200,150,62,0.3)); }
     }
 
-    /* Кнопка звука */
     #sound-btn {
       position: absolute; right: 20px; bottom: 12px;
       width: 42px; height: 42px;
@@ -186,7 +220,6 @@
     }
     #sound-btn .icon { font-size: 18px; }
 
-    /* Радиальное меню блюд */
     #food-menu {
       position: absolute; left: 50%; bottom: 33px;
       width: 0; height: 0;
@@ -252,6 +285,12 @@
     <button id="ios-start-btn">Запустить</button>
   </div>
 
+  <!-- Верхняя панель: выбор блюда -->
+  <div id="dish-selector">
+    <div class="dishes" id="dish-tabs"></div>
+  </div>
+
+  <!-- Нижняя панель: доп.меню + звук -->
   <div id="bottom-bar">
     <div id="dish-label">
       <span class="dish-name"></span>
@@ -281,34 +320,17 @@
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- Target 0: Жаркое из телятины -->
+    <!-- Один таргет — вся страница меню -->
     <a-entity id="target-0" mindar-image-target="targetIndex: 0" smooth-track="factor: 0.02; posThreshold: 0.005; rotThreshold: 0.008">
       <a-plane
-        class="video-top-plane"
+        id="video-top-plane"
         material="shader: flat; src: #video-top; side: double"
         width="2.2" height="1.24"
         position="0 0.68 0.01"
         pinch-zoom="min: 0.5; max: 3">
       </a-plane>
       <a-plane
-        class="video-bottom-plane"
-        material="shader: flat; color: black; side: double"
-        width="2.2" height="1.24"
-        position="0 -0.68 0.005">
-      </a-plane>
-    </a-entity>
-
-    <!-- Target 1: Каре ягнёнка -->
-    <a-entity id="target-1" mindar-image-target="targetIndex: 1" smooth-track="factor: 0.02; posThreshold: 0.005; rotThreshold: 0.008">
-      <a-plane
-        class="video-top-plane"
-        material="shader: flat; src: #video-top; side: double"
-        width="2.2" height="1.24"
-        position="0 0.68 0.01"
-        pinch-zoom="min: 0.5; max: 3">
-      </a-plane>
-      <a-plane
-        class="video-bottom-plane"
+        id="video-bottom-plane"
         material="shader: flat; color: black; side: double"
         width="2.2" height="1.24"
         position="0 -0.68 0.005">
@@ -318,44 +340,48 @@
   </a-scene>
 
   <script>
-    // === Конфигурация двух таргетов ===
-    // Каждый таргет: своё верхнее видео (готовое блюдо) + свои пункты меню с нижними видео
-    const targets = [
+    // === Конфигурация блюд на этой странице меню ===
+    const dishes = [
       {
-        id: 'target-0',
-        topVideo: './mu2.mp4',        // готовое жаркое
-        menuItems: [
-          { name: 'Жаркое',   price: '360 000 сум', video: './dish-video.mp4' },
-          { name: 'Стейк',    price: '180 000 сум', video: './chef.mp4' },
-          { name: 'Салат',     price: '45 000 сум',  video: './chef.mp4' },
+        name: 'Жаркое из телятины',
+        price: '360.-',
+        topVideo: './mu2.mp4',
+        subItems: [
+          { name: 'Жаркое',  price: '360.-', video: './dish-video.mp4' },
+          { name: 'Стейк',   price: '180.-', video: './chef.mp4' },
+          { name: 'Салат',    price: '45.-',  video: './chef.mp4' },
         ]
       },
       {
-        id: 'target-1',
-        topVideo: './mu2.mp4',        // готовое каре
-        menuItems: [
-          { name: 'Каре',     price: '690 000 сум', video: './dish-video.mp4' },
-          { name: 'Махи',     price: '65 000 сум',  video: './chef.mp4' },
-          { name: 'Десерт',   price: '55 000 сум',  video: './chef.mp4' },
+        name: 'Каре ягнёнка',
+        price: '690.-',
+        topVideo: './mu2.mp4',
+        subItems: [
+          { name: 'Каре',    price: '690.-', video: './dish-video.mp4' },
+          { name: 'Махи',    price: '65.-',  video: './chef.mp4' },
+          { name: 'Десерт',  price: '55.-',  video: './chef.mp4' },
         ]
       }
     ];
 
     const videoTop = document.querySelector('#video-top');
-    const logo = document.getElementById('logo');
     const scene = document.querySelector('a-scene');
+    const dishSelector = document.getElementById('dish-selector');
+    const dishTabsContainer = document.getElementById('dish-tabs');
     const bottomBar = document.getElementById('bottom-bar');
+    const bottomPlane = document.getElementById('video-bottom-plane');
     const iosOverlay = document.getElementById('ios-start');
     const iosBtn = document.getElementById('ios-start-btn');
     const foodMenu = document.getElementById('food-menu');
     const dishNameEl = document.querySelector('.dish-name');
     const dishPriceEl = document.querySelector('.dish-price');
     const soundBtn = document.getElementById('sound-btn');
+    const logo = document.getElementById('logo');
 
     let menuOpen = false;
-    let activeTarget = null;  // какой таргет сейчас виден
+    let activeDishIdx = 0;
 
-    // Нижнее видео — динамическое (общее для обоих таргетов)
+    // Нижнее видео — динамическое
     const videoBottom = document.createElement('video');
     videoBottom.muted = true;
     videoBottom.loop = true;
@@ -364,7 +390,7 @@
     videoBottom.crossOrigin = 'anonymous';
     videoBottom.preload = 'auto';
 
-    function loadBottomVideo(src, bottomPlane) {
+    function loadBottomVideo(src) {
       videoBottom.src = src;
       videoBottom.load();
       videoBottom.play().catch(() => {});
@@ -377,7 +403,7 @@
       }
     }
 
-    function applyBottomTexture(bottomPlane) {
+    function applyBottomTexture() {
       const mesh = bottomPlane.getObject3D('mesh');
       if (mesh) {
         const texture = new THREE.VideoTexture(videoBottom);
@@ -385,16 +411,50 @@
         mesh.material = new THREE.MeshBasicMaterial({ map: texture });
       }
     }
+    videoBottom.addEventListener('loadeddata', applyBottomTexture);
+    videoBottom.addEventListener('playing', applyBottomTexture);
 
-    // Строим радиальное меню для активного таргета
-    function buildMenu(targetConfig, bottomPlane) {
-      // Очистить старое меню
+    // === Построить табы блюд (вверху) ===
+    dishes.forEach((dish, i) => {
+      const tab = document.createElement('div');
+      tab.className = 'dish-tab' + (i === 0 ? ' active' : '');
+      tab.dataset.index = i;
+      tab.innerHTML = `<span class="tab-name">${dish.name}</span><span class="tab-price">${dish.price}</span>`;
+      tab.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectDish(i);
+      });
+      dishTabsContainer.appendChild(tab);
+    });
+
+    // === Выбрать блюдо ===
+    function selectDish(idx) {
+      activeDishIdx = idx;
+      const dish = dishes[idx];
+
+      // Обновить табы
+      document.querySelectorAll('.dish-tab').forEach((t, i) => {
+        t.classList.toggle('active', i === idx);
+      });
+
+      // Верхнее видео
+      videoTop.src = dish.topVideo;
+      videoTop.currentTime = 0;
+      videoTop.play().catch(() => {});
+
+      // Построить радиальное подменю
+      buildSubMenu(dish.subItems);
+
+      bottomBar.style.display = 'block';
+    }
+
+    // === Радиальное подменю доп.блюд ===
+    function buildSubMenu(items) {
       foodMenu.innerHTML = '';
       foodMenu.classList.remove('open');
       menuOpen = false;
       logo.classList.remove('menu-open');
 
-      const items = targetConfig.menuItems;
       const radius = 90;
       const startAngle = -180;
       const endAngle = 0;
@@ -421,7 +481,7 @@
 
           dishNameEl.textContent = item.name;
           dishPriceEl.textContent = item.price;
-          loadBottomVideo(item.video, bottomPlane);
+          loadBottomVideo(item.video);
 
           menuOpen = false;
           foodMenu.classList.remove('open');
@@ -434,10 +494,10 @@
       // Установить первый пункт
       dishNameEl.textContent = items[0].name;
       dishPriceEl.textContent = items[0].price;
-      loadBottomVideo(items[0].video, bottomPlane);
+      loadBottomVideo(items[0].video);
     }
 
-    // Логотип → открыть/закрыть меню
+    // Логотип → открыть/закрыть подменю
     logo.addEventListener('click', (e) => {
       e.stopPropagation();
       menuOpen = !menuOpen;
@@ -479,37 +539,25 @@
       }
     });
 
-    // === Обработка targetFound / targetLost для каждого таргета ===
-    targets.forEach((cfg) => {
-      const targetEl = document.getElementById(cfg.id);
-      const bottomPlane = targetEl.querySelector('.video-bottom-plane');
+    // === targetFound / targetLost ===
+    const targetEl = document.getElementById('target-0');
 
-      targetEl.addEventListener('targetFound', () => {
-        activeTarget = cfg;
+    targetEl.addEventListener('targetFound', () => {
+      dishSelector.style.display = 'block';
+      selectDish(0);
+      bottomPlane.setAttribute('visible', true);
+    });
 
-        // Верхнее видео
-        videoTop.src = cfg.topVideo;
-        videoTop.currentTime = 0;
-        videoTop.play().catch(() => {});
+    targetEl.addEventListener('targetLost', () => {
+      dishSelector.style.display = 'none';
+      bottomBar.style.display = 'none';
+      bottomPlane.setAttribute('visible', false);
+      videoTop.pause();
+      videoBottom.pause();
 
-        // Построить меню для этого блюда
-        buildMenu(cfg, bottomPlane);
-
-        bottomBar.style.display = 'block';
-        bottomPlane.setAttribute('visible', true);
-      });
-
-      targetEl.addEventListener('targetLost', () => {
-        bottomBar.style.display = 'none';
-        bottomPlane.setAttribute('visible', false);
-        videoTop.pause();
-        videoBottom.pause();
-
-        menuOpen = false;
-        foodMenu.classList.remove('open');
-        logo.classList.remove('menu-open');
-        activeTarget = null;
-      });
+      menuOpen = false;
+      foodMenu.classList.remove('open');
+      logo.classList.remove('menu-open');
     });
   </script>
 
