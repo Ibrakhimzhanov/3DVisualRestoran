@@ -487,6 +487,8 @@
       target.addEventListener('targetFound', () => {
         bottomBar.style.display = 'block';
         bottomPlane.setAttribute('visible', true);
+        videoTop.currentTime = 0;
+        videoBottom.currentTime = 0;
         videoTop.play().catch(() => {});
         videoBottom.play().catch(() => {});
       });
@@ -494,6 +496,8 @@
       target.addEventListener('targetLost', () => {
         bottomBar.style.display = 'none';
         bottomPlane.setAttribute('visible', false);
+        videoTop.pause();
+        videoBottom.pause();
       });
     });
   </script>
