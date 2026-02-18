@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>AR Меню — Balzac Family</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <script>
+    // Стабилизатор — сглаживает позицию и поворот + мёртвая зона
+    AFRAME.registerComponent('smooth-track', {
+      schema: {
+        factor: {type: 'number', default: 0.04},
+        posThreshold: {type: 'number', default: 0.002},
+        rotThreshold: {type: 'number', default: 0.003}
+      },
+      init: function () {
+        this.smoothPos = new THREE.Vector3();
+        this.smoothQuat = new THREE.Quaternion();
+        this.prevRawPos = new THREE.Vector3();
+        this.prevRawQuat = new THREE.Quaternion();
+        this.started = false;
+      },
+      tick: function () {
+        const obj = this.el.object3D;
+        if (!obj.visible) { this.started = false; return; }
+
+        if (!this.started) {
+          this.smoothPos.copy(obj.position);
+          this.smoothQuat.copy(obj.quaternion);
+          this.prevRawPos.copy(obj.position);
+          this.prevRawQuat.copy(obj.quaternion);
+          this.started = true;
+          return;
+        }
+
+        const posDelta = obj.position.distanceTo(this.prevRawPos);
+        const rotDelta = this.prevRawQuat.angleTo(obj.quaternion);
+
+        this.prevRawPos.copy(obj.position);
+        this.prevRawQuat.copy(obj.quaternion);
+
+        const f = this.data.factor;
+
+        if (posDelta > this.data.posThreshold) {
+          this.smoothPos.lerp(obj.position, f);
+        }
+        if (rotDelta > this.data.rotThreshold) {
+          this.smoothQuat.slerp(obj.quaternion, f);
+        }
+
+        obj.position.copy(this.smoothPos);
+        obj.quaternion.copy(this.smoothQuat);
+      }
+    });
+
+    // Pinch-to-zoom
+    AFRAME.registerComponent('pinch-zoom', {
+      schema: {
+        min: {type: 'number', default: 0.5},
+        max: {type: 'number', default: 3.0}
+      },
+      init: function () {
+        this.initialDist = 0;
+        this.initialScale = 1;
+        this.currentScale = 1;
+        this.baseWidth = parseFloat(this.el.getAttribute('width'));
+        this.baseHeight = parseFloat(this.el.getAttribute('height'));
+
+        const canvas = document.querySelector('canvas');
+        if (!canvas) return;
+
+        canvas.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 2) {
+            this.initialDist = this._dist(e.touches[0], e.touches[1]);
+            this.initialScale = this.currentScale;
+          }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+          if (e.touches.length === 2) {
+            const dist = this._dist(e.touches[0], e.touches[1]);
+            const ratio = dist / this.initialDist;
+            this.currentScale = Math.min(this.data.max,
+              Math.max(this.data.min, this.initialScale * ratio));
+            this.el.setAttribute('width', this.baseWidth * this.currentScale);
+            this.el.setAttribute('height', this.baseHeight * this.currentScale);
+          }
+        });
+      },
+      _dist: function (a, b) {
+        const dx = a.clientX - b.clientX;
+        const dy = a.clientY - b.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+    });
+  </script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+
+    .a-enter-vr, .a-enter-ar,
+    [aframe-injected] { display: none !important; }
+
+    #loading {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #0a0a0a; z-index: 9999;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      color: white; font-family: -apple-system, sans-serif;
+    }
+    #loading .logo-pulse {
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      box-shadow: 0 0 30px rgba(200,150,62,0.3);
+      animation: loading-pulse 2s ease-in-out infinite;
+      margin-bottom: 40px;
+    }
+    @keyframes loading-pulse {
+      0% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(200,150,62,0.3)); }
+      50% { transform: scale(1.08); filter: drop-shadow(0 0 24px rgba(200,150,62,0.7)); }
+      100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(200,150,62,0.3)); }
+    }
+    .loader-dots {
+      display: flex; gap: 10px; margin-bottom: 24px;
+    }
+    .loader-dots span {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #c8963e;
+      animation: dot-bounce 1.4s ease-in-out infinite;
+    }
+    .loader-dots span:nth-child(2) { animation-delay: 0.16s; }
+    .loader-dots span:nth-child(3) { animation-delay: 0.32s; }
+    @keyframes dot-bounce {
+      0%, 80%, 100% { transform: scale(0.4); opacity: 0.3; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+    #loading p { font-size: 14px; color: rgba(200,150,62,0.6); text-align: center; }
+
+    /* === Верхняя панель выбора блюда === */
+    #dish-selector {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 200; display: none;
+      padding: 12px 10px 10px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+    }
+    #dish-selector .dishes {
+      display: flex; gap: 8px; justify-content: center;
+    }
+    .dish-tab {
+      flex: 1; max-width: 150px;
+      padding: 10px 6px;
+      background: transparent;
+      border: 1.5px solid rgba(200,150,62,0.2);
+      border-radius: 14px;
+      font-family: -apple-system, sans-serif;
+      font-size: 12px; font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.3s;
+      opacity: 0.5;
+    }
+    .dish-tab .tab-name {
+      display: block; color: #c8963e; font-size: 12px; font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .dish-tab .tab-price {
+      display: block; color: #e8c76a; font-size: 11px; font-weight: 600;
+    }
+    .dish-tab.active {
+      border-color: #c8963e;
+      background: rgba(0,0,0,0.8);
+      box-shadow: 0 0 12px rgba(200,150,62,0.3);
+      opacity: 1;
+    }
+
+    /* === Нижняя панель === */
+    #bottom-bar {
+      position: fixed; bottom: 20px; left: 0; right: 0;
+      z-index: 100; display: none;
+    }
+
+    #dish-label {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      bottom: 76px;
+      background: rgba(0,0,0,0.82);
+      border: 1px solid rgba(200,150,62,0.4);
+      border-radius: 24px;
+      padding: 7px 22px;
+      white-space: nowrap;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+      transition: opacity 0.3s;
+    }
+    .dish-name {
+      font-family: -apple-system, sans-serif;
+      font-size: 16px; font-weight: 700;
+      color: #c8963e;
+    }
+    .dish-sep {
+      color: rgba(200,150,62,0.4);
+      margin: 0 8px; font-size: 14px;
+    }
+    .dish-price {
+      font-family: -apple-system, sans-serif;
+      font-size: 15px; font-weight: 600;
+      color: #e8c76a;
+    }
+
+    #logo {
+      position: absolute; left: 50%; transform: translateX(-50%); bottom: 0;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      z-index: 10;
+      animation: logo-pulse 1.8s ease-in-out infinite;
+    }
+    #logo img {
+      width: 66px; height: 66px;
+      border-radius: 50%;
+      box-shadow: 0 2px 14px rgba(0,0,0,0.5);
+    }
+    #logo.menu-open { animation: none; }
+    @keyframes logo-pulse {
+      0% { transform: translateX(-50%) scale(1); filter: drop-shadow(0 0 4px rgba(200,150,62,0.3)); }
+      50% { transform: translateX(-50%) scale(1.1); filter: drop-shadow(0 0 14px rgba(200,150,62,0.7)); }
+      100% { transform: translateX(-50%) scale(1); filter: drop-shadow(0 0 4px rgba(200,150,62,0.3)); }
+    }
+
+    #sound-btn {
+      position: absolute; right: 20px; bottom: 12px;
+      width: 42px; height: 42px;
+      background: rgba(0,0,0,0.8);
+      border: 1.5px solid rgba(200,150,62,0.5);
+      border-radius: 50%;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10;
+    }
+    #sound-btn .icon { font-size: 18px; }
+
+    #food-menu {
+      position: absolute; left: 50%; bottom: 33px;
+      width: 0; height: 0;
+      z-index: 5;
+    }
+    .food-item {
+      position: absolute;
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.88);
+      border: 1.5px solid #c8963e;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      opacity: 0;
+      transform: scale(0.3);
+      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      pointer-events: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    .food-item span {
+      font-family: -apple-system, sans-serif;
+      font-size: 10px; font-weight: 700;
+      color: #c8963e;
+      text-align: center;
+      line-height: 1.1;
+    }
+    .food-item.active {
+      border-color: #e8c76a;
+      background: rgba(200,150,62,0.25);
+    }
+    #food-menu.open .food-item {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div id="loading">
+    <img class="logo-pulse" src="./balzak.png" alt="Balzac Family">
+    <div class="loader-dots">
+      <span></span><span></span><span></span>
+    </div>
+    <p>Наведите камеру на меню</p>
+  </div>
+
+
+  <!-- Верхняя панель: выбор блюда -->
+  <div id="dish-selector">
+    <div class="dishes" id="dish-tabs"></div>
+  </div>
+
+  <!-- Нижняя панель: доп.меню + звук -->
+  <div id="bottom-bar">
+    <div id="dish-label">
+      <span class="dish-name"></span>
+      <span class="dish-sep">&middot;</span>
+      <span class="dish-price"></span>
+    </div>
+
+    <div id="food-menu"></div>
+
+    <div id="logo"><img src="./balzak.png" alt="Balzac Family"></div>
+    <button id="sound-btn"><span class="icon">🔇</span></button>
+  </div>
+
+  <a-scene
+    mindar-image="imageTargetSrc: ./targets-balzac.mind; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 0.5; warmupTolerance: 0; missTolerance: 5;"
+    color-space="sRGB"
+    renderer="colorManagement: true;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    loading-screen="enabled: false">
+
+    <a-assets>
+      <video id="video-top" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous"
+        src="./MU2.mp4">
+      </video>
+      <video id="video-bottom" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous">
+      </video>
+      <img id="logo-img" src="./balzak.png">
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <!-- Один таргет — вся страница меню -->
+    <a-entity id="target-0" mindar-image-target="targetIndex: 0" smooth-track="factor: 0.02; posThreshold: 0.005; rotThreshold: 0.008">
+      <a-plane
+        id="video-top-plane"
+        material="shader: flat; src: #video-top; side: double"
+        width="2.2" height="1.24"
+        position="0 0.68 0.01"
+        pinch-zoom="min: 0.5; max: 3">
+      </a-plane>
+      <!-- Заглушка верхнего видео -->
+      <a-plane
+        id="loader-top"
+        material="shader: flat; color: #111; side: double"
+        width="2.2" height="1.24"
+        position="0 0.68 0.02">
+        <a-image src="#logo-img" width="0.5" height="0.5" position="0 0 0.01"
+          animation="property: scale; from: 1 1 1; to: 1.1 1.1 1.1; dur: 1000; dir: alternate; loop: true; easing: easeInOutSine">
+        </a-image>
+      </a-plane>
+
+      <a-plane
+        id="video-bottom-plane"
+        material="shader: flat; color: black; side: double"
+        width="2.2" height="1.24"
+        position="0 -0.68 0.005">
+      </a-plane>
+      <!-- Заглушка нижнего видео -->
+      <a-plane
+        id="loader-bottom"
+        material="shader: flat; color: #111; side: double"
+        width="2.2" height="1.24"
+        position="0 -0.68 0.015">
+        <a-image src="#logo-img" width="0.5" height="0.5" position="0 0 0.01"
+          animation="property: scale; from: 1 1 1; to: 1.1 1.1 1.1; dur: 1000; dir: alternate; loop: true; easing: easeInOutSine">
+        </a-image>
+      </a-plane>
+    </a-entity>
+
+  </a-scene>
+
+  <script>
+    // === Конфигурация блюд — Balzac Family ===
+    const dishes = [
+      {
+        name: 'Нисуаз с тунцом',
+        price: '130 000 сум',
+        topVideo: './MU2.mp4',
+        subItems: [
+          { name: 'Нисуаз',    price: '130 000 сум', video: './1.mp4' },
+          { name: 'Тунец',     price: '130 000 сум', video: './5.mp4' },
+          { name: 'Напиток',   price: '15 000 сум',  video: './Cola.mp4' },
+          { name: 'Салат',     price: '45 000 сум',  video: './Salat.mp4' },
+        ]
+      },
+      {
+        name: 'Теплый салат',
+        price: '80 000 сум',
+        topVideo: './MU2.mp4',
+        subItems: [
+          { name: 'Т. Салат',  price: '80 000 сум',  video: './1.mp4' },
+          { name: 'Телятина',  price: '80 000 сум',  video: './2.mp4' },
+          { name: 'Напиток',   price: '15 000 сум',  video: './Cola.mp4' },
+        ]
+      },
+      {
+        name: 'Салат с лососем',
+        price: '160 000 сум',
+        topVideo: './MU2.mp4',
+        subItems: [
+          { name: 'Лосось',   price: '160 000 сум', video: './6.mp4' },
+          { name: 'Авокадо',  price: '160 000 сум', video: './2.mp4' },
+          { name: 'Гарнир',   price: '160 000 сум', video: './4.mp4' },
+          { name: 'Десерт',   price: '55 000 сум',  video: './3.mp4' },
+        ]
+      }
+    ];
+
+    const videoTop = document.querySelector('#video-top');
+    const scene = document.querySelector('a-scene');
+    const dishSelector = document.getElementById('dish-selector');
+    const dishTabsContainer = document.getElementById('dish-tabs');
+    const bottomBar = document.getElementById('bottom-bar');
+    const bottomPlane = document.getElementById('video-bottom-plane');
+    const foodMenu = document.getElementById('food-menu');
+    const dishNameEl = document.querySelector('.dish-name');
+    const dishPriceEl = document.querySelector('.dish-price');
+    const soundBtn = document.getElementById('sound-btn');
+    const logo = document.getElementById('logo');
+
+    let menuOpen = false;
+    let activeDishIdx = 0;
+
+    // Нижнее видео — из DOM (важно для iOS)
+    const videoBottom = document.querySelector('#video-bottom');
+    const loaderTop = document.getElementById('loader-top');
+    const loaderBottom = document.getElementById('loader-bottom');
+
+    // Скрыть заглушку только когда видео реально рендерит кадры
+    videoTop.addEventListener('timeupdate', function handler() {
+      if (videoTop.currentTime > 0.05) {
+        loaderTop.setAttribute('visible', false);
+        videoTop.removeEventListener('timeupdate', handler);
+      }
+    });
+    // Для повторных загрузок верхнего видео
+    videoTop.addEventListener('loadstart', () => {
+      loaderTop.setAttribute('visible', true);
+      videoTop.addEventListener('timeupdate', function h() {
+        if (videoTop.currentTime > 0.05) {
+          loaderTop.setAttribute('visible', false);
+          videoTop.removeEventListener('timeupdate', h);
+        }
+      });
+    });
+    videoBottom.addEventListener('loadstart', () => {
+      loaderBottom.setAttribute('visible', true);
+      videoBottom.addEventListener('timeupdate', function h() {
+        if (videoBottom.currentTime > 0.05) {
+          loaderBottom.setAttribute('visible', false);
+          videoBottom.removeEventListener('timeupdate', h);
+        }
+      });
+    });
+
+    function showLoaders() {
+      loaderTop.setAttribute('visible', true);
+      loaderBottom.setAttribute('visible', true);
+    }
+
+    function loadBottomVideo(src) {
+      const fullSrc = new URL(src, location.href).href;
+      const changed = videoBottom.src !== fullSrc;
+      if (changed) {
+        loaderBottom.setAttribute('visible', true);
+        videoBottom.src = src;
+        videoBottom.load();
+      }
+      videoBottom.currentTime = 0;
+      videoBottom.play().catch(() => {});
+
+      const mesh = bottomPlane.getObject3D('mesh');
+      if (mesh) {
+        const texture = new THREE.VideoTexture(videoBottom);
+        texture.minFilter = THREE.LinearFilter;
+        mesh.material = new THREE.MeshBasicMaterial({ map: texture });
+      }
+    }
+
+    function applyBottomTexture() {
+      const mesh = bottomPlane.getObject3D('mesh');
+      if (mesh) {
+        const texture = new THREE.VideoTexture(videoBottom);
+        texture.minFilter = THREE.LinearFilter;
+        mesh.material = new THREE.MeshBasicMaterial({ map: texture });
+      }
+    }
+    videoBottom.addEventListener('loadeddata', applyBottomTexture);
+    videoBottom.addEventListener('playing', applyBottomTexture);
+
+    // === Построить табы блюд (вверху) ===
+    dishes.forEach((dish, i) => {
+      const tab = document.createElement('div');
+      tab.className = 'dish-tab' + (i === 0 ? ' active' : '');
+      tab.dataset.index = i;
+      tab.innerHTML = `<span class="tab-name">${dish.name}</span><span class="tab-price">${dish.price}</span>`;
+      tab.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectDish(i);
+      });
+      dishTabsContainer.appendChild(tab);
+    });
+
+    // === Выбрать блюдо ===
+    function selectDish(idx) {
+      activeDishIdx = idx;
+      const dish = dishes[idx];
+
+      // Обновить табы
+      document.querySelectorAll('.dish-tab').forEach((t, i) => {
+        t.classList.toggle('active', i === idx);
+      });
+
+      // Верхнее видео — не перезагружать если тот же src
+      const topSrc = new URL(dish.topVideo, location.href).href;
+      if (videoTop.src !== topSrc) {
+        loaderTop.setAttribute('visible', true);
+        videoTop.src = dish.topVideo;
+        videoTop.load();
+      }
+      videoTop.currentTime = 0;
+      videoTop.play().catch(() => {});
+
+      // Построить радиальное подменю
+      buildSubMenu(dish.subItems);
+
+      bottomBar.style.display = 'block';
+    }
+
+    // === Радиальное подменю доп.блюд ===
+    function buildSubMenu(items) {
+      foodMenu.innerHTML = '';
+      foodMenu.classList.remove('open');
+      menuOpen = false;
+      logo.classList.remove('menu-open');
+
+      const radius = 90;
+      const startAngle = -180;
+      const endAngle = 0;
+
+      items.forEach((item, i) => {
+        const div = document.createElement('div');
+        div.className = 'food-item' + (i === 0 ? ' active' : '');
+        div.dataset.index = i;
+        div.innerHTML = `<span>${item.name}</span>`;
+
+        const count = items.length > 1 ? items.length - 1 : 1;
+        const angle = startAngle + (endAngle - startAngle) * i / count;
+        const rad = angle * Math.PI / 180;
+        const x = Math.cos(rad) * radius;
+        const y = Math.sin(rad) * radius;
+        div.style.left = (x - 28) + 'px';
+        div.style.top = (y - 28) + 'px';
+        div.style.transitionDelay = (i * 0.05) + 's';
+
+        div.addEventListener('click', (e) => {
+          e.stopPropagation();
+          foodMenu.querySelectorAll('.food-item').forEach(fi => fi.classList.remove('active'));
+          div.classList.add('active');
+
+          dishNameEl.textContent = item.name;
+          dishPriceEl.textContent = item.price;
+          loadBottomVideo(item.video);
+
+          menuOpen = false;
+          foodMenu.classList.remove('open');
+          logo.classList.remove('menu-open');
+        });
+
+        foodMenu.appendChild(div);
+      });
+
+      // Установить первый пункт
+      dishNameEl.textContent = items[0].name;
+      dishPriceEl.textContent = items[0].price;
+      loadBottomVideo(items[0].video);
+    }
+
+    // Логотип → открыть/закрыть подменю
+    logo.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menuOpen = !menuOpen;
+      foodMenu.classList.toggle('open', menuOpen);
+      logo.classList.toggle('menu-open', menuOpen);
+    });
+
+    // Закрыть меню при тапе вне
+    document.addEventListener('click', () => {
+      if (menuOpen) {
+        menuOpen = false;
+        foodMenu.classList.remove('open');
+        logo.classList.remove('menu-open');
+      }
+    });
+
+    // === Звук ===
+    soundBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      videoBottom.muted = !videoBottom.muted;
+      soundBtn.querySelector('.icon').textContent = videoBottom.muted ? '🔇' : '🔊';
+    });
+
+    // === AR ===
+    scene.addEventListener('arReady', () => {
+      document.getElementById('loading').style.display = 'none';
+    });
+
+
+    // === targetFound / targetLost ===
+    const targetEl = document.getElementById('target-0');
+
+    const topPlane = document.getElementById('video-top-plane');
+    topPlane.setAttribute('visible', false);
+    bottomPlane.setAttribute('visible', false);
+
+    let firstFound = true;
+    targetEl.addEventListener('targetFound', () => {
+      topPlane.setAttribute('visible', true);
+      bottomPlane.setAttribute('visible', true);
+      dishSelector.style.display = 'block';
+
+      if (firstFound) {
+        selectDish(0);
+        firstFound = false;
+      } else {
+        // Видео уже загружено — просто play
+        videoTop.currentTime = 0;
+        videoTop.play().catch(() => {});
+        videoBottom.currentTime = 0;
+        videoBottom.play().catch(() => {});
+        loaderTop.setAttribute('visible', false);
+        loaderBottom.setAttribute('visible', false);
+        bottomBar.style.display = 'block';
+      }
+    });
+
+    targetEl.addEventListener('targetLost', () => {
+      topPlane.setAttribute('visible', false);
+      bottomPlane.setAttribute('visible', false);
+      dishSelector.style.display = 'none';
+      bottomBar.style.display = 'none';
+      videoTop.pause();
+      videoBottom.pause();
+
+      menuOpen = false;
+      foodMenu.classList.remove('open');
+      logo.classList.remove('menu-open');
+    });
+  </script>
+
+</body>
+</html>
