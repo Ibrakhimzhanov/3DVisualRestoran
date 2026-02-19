@@ -245,6 +245,12 @@
   </a-scene>
 
   <script>
+    let currentLang = 'ru';
+
+    function getName(item) {
+      return currentLang === 'uz' ? item.nameUz : item.name;
+    }
+
     const dishes = [
       {
         name: 'Бургеры', nameUz: 'Burgerlar',
@@ -373,13 +379,8 @@
     soundBtn.addEventListener('click', (e) => { e.stopPropagation(); videoBottom.muted = !videoBottom.muted; soundBtn.querySelector('.icon').textContent = videoBottom.muted ? '🔇' : '🔊'; });
 
     // === Язык с флагами ===
-    let currentLang = 'ru';
     const langBtn = document.getElementById('lang-btn');
     const loadingText = document.querySelector('#loading p');
-
-    function getName(item) {
-      return currentLang === 'uz' ? item.nameUz : item.name;
-    }
 
     function updateLangBtn() {
       if (currentLang === 'ru') {
