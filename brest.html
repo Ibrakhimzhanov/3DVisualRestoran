@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>AR Меню — Brest</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <script>
+    AFRAME.registerComponent('smooth-track', {
+      schema: {
+        factor: {type: 'number', default: 0.04},
+        posThreshold: {type: 'number', default: 0.002},
+        rotThreshold: {type: 'number', default: 0.003}
+      },
+      init: function () {
+        this.smoothPos = new THREE.Vector3();
+        this.smoothQuat = new THREE.Quaternion();
+        this.prevRawPos = new THREE.Vector3();
+        this.prevRawQuat = new THREE.Quaternion();
+        this.started = false;
+      },
+      tick: function () {
+        const obj = this.el.object3D;
+        if (!obj.visible) { this.started = false; return; }
+        if (!this.started) {
+          this.smoothPos.copy(obj.position);
+          this.smoothQuat.copy(obj.quaternion);
+          this.prevRawPos.copy(obj.position);
+          this.prevRawQuat.copy(obj.quaternion);
+          this.started = true;
+          return;
+        }
+        const posDelta = obj.position.distanceTo(this.prevRawPos);
+        const rotDelta = this.prevRawQuat.angleTo(obj.quaternion);
+        this.prevRawPos.copy(obj.position);
+        this.prevRawQuat.copy(obj.quaternion);
+        const f = this.data.factor;
+        if (posDelta > this.data.posThreshold) this.smoothPos.lerp(obj.position, f);
+        if (rotDelta > this.data.rotThreshold) this.smoothQuat.slerp(obj.quaternion, f);
+        obj.position.copy(this.smoothPos);
+        obj.quaternion.copy(this.smoothQuat);
+      }
+    });
+
+    AFRAME.registerComponent('pinch-zoom', {
+      schema: { min: {type:'number',default:0.5}, max: {type:'number',default:3.0} },
+      init: function () {
+        this.initialDist = 0; this.initialScale = 1; this.currentScale = 1;
+        this.baseWidth = parseFloat(this.el.getAttribute('width'));
+        this.baseHeight = parseFloat(this.el.getAttribute('height'));
+        const canvas = document.querySelector('canvas');
+        if (!canvas) return;
+        canvas.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 2) {
+            this.initialDist = this._dist(e.touches[0], e.touches[1]);
+            this.initialScale = this.currentScale;
+          }
+        });
+        canvas.addEventListener('touchmove', (e) => {
+          if (e.touches.length === 2) {
+            const dist = this._dist(e.touches[0], e.touches[1]);
+            const ratio = dist / this.initialDist;
+            this.currentScale = Math.min(this.data.max, Math.max(this.data.min, this.initialScale * ratio));
+            this.el.setAttribute('width', this.baseWidth * this.currentScale);
+            this.el.setAttribute('height', this.baseHeight * this.currentScale);
+          }
+        });
+      },
+      _dist: function (a, b) {
+        const dx = a.clientX - b.clientX, dy = a.clientY - b.clientY;
+        return Math.sqrt(dx*dx + dy*dy);
+      }
+    });
+  </script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    .a-enter-vr, .a-enter-ar, [aframe-injected] { display: none !important; }
+
+    #loading {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #1a2612; z-index: 9999;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      color: white; font-family: -apple-system, sans-serif;
+    }
+    #loading .logo-pulse {
+      width: 100px; height: 100px; border-radius: 50%;
+      box-shadow: 0 0 30px rgba(160,120,60,0.4);
+      animation: loading-pulse 2s ease-in-out infinite;
+      margin-bottom: 40px;
+    }
+    @keyframes loading-pulse {
+      0% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(160,120,60,0.3)); }
+      50% { transform: scale(1.08); filter: drop-shadow(0 0 24px rgba(160,120,60,0.7)); }
+      100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(160,120,60,0.3)); }
+    }
+    .loader-dots { display: flex; gap: 10px; margin-bottom: 24px; }
+    .loader-dots span {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #c8a050; animation: dot-bounce 1.4s ease-in-out infinite;
+    }
+    .loader-dots span:nth-child(2) { animation-delay: 0.16s; }
+    .loader-dots span:nth-child(3) { animation-delay: 0.32s; }
+    @keyframes dot-bounce {
+      0%, 80%, 100% { transform: scale(0.4); opacity: 0.3; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+    #loading p { font-size: 14px; color: rgba(200,160,80,0.6); text-align: center; }
+
+    #dish-selector {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 200; display: none;
+      padding: 12px 10px 10px;
+      background: linear-gradient(to bottom, rgba(26,38,18,0.75) 0%, transparent 100%);
+    }
+    #dish-selector .dishes { display: flex; gap: 8px; justify-content: center; }
+    .dish-tab {
+      flex: 1; max-width: 120px; padding: 10px 6px;
+      background: transparent;
+      border: 1.5px solid rgba(200,160,80,0.2);
+      border-radius: 14px;
+      font-family: -apple-system, sans-serif;
+      font-size: 13px; font-weight: 600; text-align: center;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      transition: all 0.3s; opacity: 0.5;
+    }
+    .dish-tab .tab-name { display: block; color: #c8a050; font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+    .dish-tab .tab-price { display: block; color: #e0c878; font-size: 11px; font-weight: 600; }
+    .dish-tab.active {
+      border-color: #a0783c; background: rgba(26,38,18,0.85);
+      box-shadow: 0 0 12px rgba(160,120,60,0.4); opacity: 1;
+    }
+
+    #bottom-bar { position: fixed; bottom: 20px; left: 0; right: 0; z-index: 100; display: none; }
+    #dish-label {
+      position: absolute; left: 50%; transform: translateX(-50%); bottom: 76px;
+      background: rgba(26,38,18,0.85);
+      border: 1px solid rgba(200,160,80,0.5);
+      border-radius: 24px; padding: 7px 22px;
+      white-space: nowrap; box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+      transition: opacity 0.3s;
+    }
+    .dish-name { font-family: -apple-system, sans-serif; font-size: 16px; font-weight: 700; color: #c8a050; }
+    .dish-sep { color: rgba(200,160,80,0.4); margin: 0 8px; font-size: 14px; }
+    .dish-price { font-family: -apple-system, sans-serif; font-size: 15px; font-weight: 600; color: #e0c878; }
+
+    #logo {
+      position: absolute; left: 50%; transform: translateX(-50%); bottom: 0;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      z-index: 10; animation: logo-pulse 1.8s ease-in-out infinite;
+    }
+    #logo img { width: 66px; height: 66px; border-radius: 50%; box-shadow: 0 2px 14px rgba(0,0,0,0.5); }
+    #logo.menu-open { animation: none; }
+    @keyframes logo-pulse {
+      0% { transform: translateX(-50%) scale(1); filter: drop-shadow(0 0 4px rgba(160,120,60,0.3)); }
+      50% { transform: translateX(-50%) scale(1.1); filter: drop-shadow(0 0 14px rgba(160,120,60,0.7)); }
+      100% { transform: translateX(-50%) scale(1); filter: drop-shadow(0 0 4px rgba(160,120,60,0.3)); }
+    }
+
+    #sound-btn {
+      position: absolute; right: 20px; bottom: 12px;
+      width: 42px; height: 42px; background: rgba(26,38,18,0.85);
+      border: 1.5px solid rgba(200,160,80,0.5); border-radius: 50%;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      display: flex; align-items: center; justify-content: center; z-index: 10;
+    }
+    #sound-btn .icon { font-size: 18px; }
+
+    #lang-btn {
+      position: absolute; left: 20px; bottom: 12px;
+      height: 42px;
+      background: rgba(26,38,18,0.85);
+      border: 1.5px solid rgba(200,160,80,0.5);
+      border-radius: 21px;
+      padding: 0 14px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      display: flex; align-items: center; gap: 6px;
+      z-index: 10;
+      font-family: -apple-system, sans-serif;
+      font-size: 13px; font-weight: 700;
+      color: #c8a050;
+    }
+    #lang-btn .lang-flag { font-size: 18px; line-height: 1; }
+
+    #food-menu { position: absolute; left: 50%; bottom: 33px; width: 0; height: 0; z-index: 5; }
+    .food-item {
+      position: absolute; width: 56px; height: 56px; border-radius: 50%;
+      background: rgba(26,38,18,0.90); border: 1.5px solid #a0783c;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      opacity: 0; transform: scale(0.3);
+      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      pointer-events: none; box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    .food-item span { font-family: -apple-system, sans-serif; font-size: 10px; font-weight: 700; color: #c8a050; text-align: center; line-height: 1.1; }
+    .food-item.active { border-color: #e0c878; background: rgba(160,120,60,0.25); }
+    #food-menu.open .food-item { opacity: 1; transform: scale(1); pointer-events: auto; }
+  </style>
+</head>
+<body>
+
+  <div id="loading">
+    <img class="logo-pulse" src="./brest.png" alt="Brest">
+    <div class="loader-dots"><span></span><span></span><span></span></div>
+    <p>Наведите камеру на меню</p>
+  </div>
+
+  <div id="dish-selector"><div class="dishes" id="dish-tabs"></div></div>
+
+  <div id="bottom-bar">
+    <div id="dish-label">
+      <span class="dish-name"></span>
+      <span class="dish-sep">&middot;</span>
+      <span class="dish-price"></span>
+    </div>
+    <div id="food-menu"></div>
+    <div id="logo"><img src="./brest.png" alt="Brest"></div>
+    <button id="sound-btn"><span class="icon">🔇</span></button>
+    <button id="lang-btn"><span class="lang-flag">🇺🇿</span> UZ</button>
+  </div>
+
+  <a-scene
+    mindar-image="imageTargetSrc: ./targets-brest.mind; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 0.5; warmupTolerance: 0; missTolerance: 5;"
+    color-space="sRGB" renderer="colorManagement: true;"
+    vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false"
+    loading-screen="enabled: false">
+    <a-assets>
+      <video id="video-top" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous" src="./MU2.mp4"></video>
+      <video id="video-bottom" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous"></video>
+      <img id="logo-img" src="./brest.png">
+    </a-assets>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+    <a-entity id="target-0" mindar-image-target="targetIndex: 0" smooth-track="factor: 0.02; posThreshold: 0.005; rotThreshold: 0.008">
+      <a-plane id="video-top-plane" material="shader: flat; src: #video-top; side: double" width="2.2" height="1.24" position="0 0.68 0.01" pinch-zoom="min: 0.5; max: 3"></a-plane>
+      <a-plane id="loader-top" material="shader: flat; color: #1a2612; side: double" width="2.2" height="1.24" position="0 0.68 0.02">
+        <a-image src="#logo-img" width="0.5" height="0.5" position="0 0 0.01" animation="property: scale; from: 1 1 1; to: 1.1 1.1 1.1; dur: 1000; dir: alternate; loop: true; easing: easeInOutSine"></a-image>
+      </a-plane>
+      <a-plane id="video-bottom-plane" material="shader: flat; color: black; side: double" width="2.2" height="1.24" position="0 -0.68 0.005"></a-plane>
+      <a-plane id="loader-bottom" material="shader: flat; color: #1a2612; side: double" width="2.2" height="1.24" position="0 -0.68 0.015">
+        <a-image src="#logo-img" width="0.5" height="0.5" position="0 0 0.01" animation="property: scale; from: 1 1 1; to: 1.1 1.1 1.1; dur: 1000; dir: alternate; loop: true; easing: easeInOutSine"></a-image>
+      </a-plane>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    const dishes = [
+      {
+        name: 'Бургеры', nameUz: 'Burgerlar',
+        price: '$12 – $16',
+        topVideo: './MU2.mp4',
+        subItems: [
+          { name: 'Чизбургер', nameUz: 'Chizburger', price: '$16.00', video: './1.mp4' },
+          { name: 'Бекон Бургер', nameUz: 'Bekon Burger', price: '$12.50', video: './2.mp4' },
+          { name: 'Вегги Бургер', nameUz: 'Sabzavotli Burger', price: '$14.00', video: './3.mp4' },
+          { name: 'Чикен Бургер', nameUz: 'Tovuqli Burger', price: '$13.50', video: './Cola.mp4' },
+        ]
+      },
+      {
+        name: 'Пицца', nameUz: 'Pitsa',
+        price: '$14 – $17',
+        topVideo: './MU2.mp4',
+        subItems: [
+          { name: 'Маргарита', nameUz: 'Margarita', price: '$17.00', video: './4.mp4' },
+          { name: 'Пепперони', nameUz: 'Pepperoni', price: '$14.50', video: './5.mp4' },
+          { name: 'Гавайская', nameUz: 'Gavayi', price: '$15.00', video: './6.mp4' },
+          { name: 'BBQ Чикен', nameUz: 'BBQ Tovuqli', price: '$14.50', video: './Salat.mp4' },
+        ]
+      },
+      {
+        name: 'Буррито', nameUz: 'Burrito',
+        price: '$13 – $15',
+        topVideo: './MU2.mp4',
+        subItems: [
+          { name: 'Говяжий', nameUz: "Mol go'shtli", price: '$14.00', video: './1.mp4' },
+          { name: 'С курицей', nameUz: 'Tovuqli', price: '$13.50', video: './2.mp4' },
+          { name: 'Карнитас', nameUz: 'Karnitas', price: '$15.00', video: './3.mp4' },
+          { name: 'С креветками', nameUz: 'Krevetkali', price: '$13.50', video: './Cola.mp4' },
+        ]
+      }
+    ];
+
+    const videoTop = document.querySelector('#video-top');
+    const scene = document.querySelector('a-scene');
+    const dishSelector = document.getElementById('dish-selector');
+    const dishTabsContainer = document.getElementById('dish-tabs');
+    const bottomBar = document.getElementById('bottom-bar');
+    const bottomPlane = document.getElementById('video-bottom-plane');
+    const foodMenu = document.getElementById('food-menu');
+    const dishNameEl = document.querySelector('.dish-name');
+    const dishPriceEl = document.querySelector('.dish-price');
+    const soundBtn = document.getElementById('sound-btn');
+    const logo = document.getElementById('logo');
+    let menuOpen = false, activeDishIdx = 0;
+    const videoBottom = document.querySelector('#video-bottom');
+    const loaderTop = document.getElementById('loader-top');
+    const loaderBottom = document.getElementById('loader-bottom');
+
+    videoTop.addEventListener('timeupdate', function handler() {
+      if (videoTop.currentTime > 0.05) { loaderTop.setAttribute('visible', false); videoTop.removeEventListener('timeupdate', handler); }
+    });
+    videoTop.addEventListener('loadstart', () => {
+      loaderTop.setAttribute('visible', true);
+      videoTop.addEventListener('timeupdate', function h() { if (videoTop.currentTime > 0.05) { loaderTop.setAttribute('visible', false); videoTop.removeEventListener('timeupdate', h); } });
+    });
+    videoBottom.addEventListener('loadstart', () => {
+      loaderBottom.setAttribute('visible', true);
+      videoBottom.addEventListener('timeupdate', function h() { if (videoBottom.currentTime > 0.05) { loaderBottom.setAttribute('visible', false); videoBottom.removeEventListener('timeupdate', h); } });
+    });
+
+    function loadBottomVideo(src) {
+      const fullSrc = new URL(src, location.href).href;
+      if (videoBottom.src !== fullSrc) { loaderBottom.setAttribute('visible', true); videoBottom.src = src; videoBottom.load(); }
+      videoBottom.currentTime = 0; videoBottom.play().catch(() => {});
+      const mesh = bottomPlane.getObject3D('mesh');
+      if (mesh) { const t = new THREE.VideoTexture(videoBottom); t.minFilter = THREE.LinearFilter; mesh.material = new THREE.MeshBasicMaterial({ map: t }); }
+    }
+    function applyBottomTexture() {
+      const mesh = bottomPlane.getObject3D('mesh');
+      if (mesh) { const t = new THREE.VideoTexture(videoBottom); t.minFilter = THREE.LinearFilter; mesh.material = new THREE.MeshBasicMaterial({ map: t }); }
+    }
+    videoBottom.addEventListener('loadeddata', applyBottomTexture);
+    videoBottom.addEventListener('playing', applyBottomTexture);
+
+    dishes.forEach((dish, i) => {
+      const tab = document.createElement('div');
+      tab.className = 'dish-tab' + (i === 0 ? ' active' : '');
+      tab.dataset.index = i;
+      tab.innerHTML = `<span class="tab-name">${getName(dish)}</span><span class="tab-price">${dish.price}</span>`;
+      tab.addEventListener('click', (e) => { e.stopPropagation(); selectDish(i); });
+      dishTabsContainer.appendChild(tab);
+    });
+
+    function selectDish(idx) {
+      activeDishIdx = idx; const dish = dishes[idx];
+      document.querySelectorAll('.dish-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+      const topSrc = new URL(dish.topVideo, location.href).href;
+      if (videoTop.src !== topSrc) { loaderTop.setAttribute('visible', true); videoTop.src = dish.topVideo; videoTop.load(); }
+      videoTop.currentTime = 0; videoTop.play().catch(() => {});
+      buildSubMenu(dish.subItems); bottomBar.style.display = 'block';
+    }
+
+    function buildSubMenu(items) {
+      foodMenu.innerHTML = ''; foodMenu.classList.remove('open'); menuOpen = false; logo.classList.remove('menu-open');
+      const radius = 90, startAngle = -180, endAngle = 0;
+      items.forEach((item, i) => {
+        const div = document.createElement('div');
+        div.className = 'food-item' + (i === 0 ? ' active' : '');
+        div.dataset.index = i; div.innerHTML = `<span>${getName(item)}</span>`;
+        const count = items.length > 1 ? items.length - 1 : 1;
+        const angle = startAngle + (endAngle - startAngle) * i / count;
+        const rad = angle * Math.PI / 180;
+        div.style.left = (Math.cos(rad) * radius - 28) + 'px';
+        div.style.top = (Math.sin(rad) * radius - 28) + 'px';
+        div.style.transitionDelay = (i * 0.05) + 's';
+        div.addEventListener('click', (e) => {
+          e.stopPropagation();
+          foodMenu.querySelectorAll('.food-item').forEach(fi => fi.classList.remove('active'));
+          div.classList.add('active');
+          dishNameEl.textContent = getName(item); dishPriceEl.textContent = item.price;
+          loadBottomVideo(item.video);
+          menuOpen = false; foodMenu.classList.remove('open'); logo.classList.remove('menu-open');
+        });
+        foodMenu.appendChild(div);
+      });
+      dishNameEl.textContent = getName(items[0]); dishPriceEl.textContent = items[0].price;
+      loadBottomVideo(items[0].video);
+    }
+
+    logo.addEventListener('click', (e) => { e.stopPropagation(); menuOpen = !menuOpen; foodMenu.classList.toggle('open', menuOpen); logo.classList.toggle('menu-open', menuOpen); });
+    document.addEventListener('click', () => { if (menuOpen) { menuOpen = false; foodMenu.classList.remove('open'); logo.classList.remove('menu-open'); } });
+    soundBtn.addEventListener('click', (e) => { e.stopPropagation(); videoBottom.muted = !videoBottom.muted; soundBtn.querySelector('.icon').textContent = videoBottom.muted ? '🔇' : '🔊'; });
+
+    // === Язык с флагами ===
+    let currentLang = 'ru';
+    const langBtn = document.getElementById('lang-btn');
+    const loadingText = document.querySelector('#loading p');
+
+    function getName(item) {
+      return currentLang === 'uz' ? item.nameUz : item.name;
+    }
+
+    function updateLangBtn() {
+      if (currentLang === 'ru') {
+        langBtn.innerHTML = '<span class="lang-flag">🇺🇿</span> UZ';
+      } else {
+        langBtn.innerHTML = '<span class="lang-flag">🇷🇺</span> RU';
+      }
+    }
+
+    langBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      currentLang = currentLang === 'ru' ? 'uz' : 'ru';
+      updateLangBtn();
+      loadingText.textContent = currentLang === 'ru' ? 'Наведите камеру на меню' : "Kamerani menyuga yo'naltiring";
+      refreshTexts();
+    });
+
+    function refreshTexts() {
+      document.querySelectorAll('.dish-tab').forEach((tab, i) => {
+        tab.querySelector('.tab-name').textContent = getName(dishes[i]);
+      });
+      const dish = dishes[activeDishIdx];
+      const activeEl = foodMenu.querySelector('.food-item.active');
+      const subIdx = activeEl ? parseInt(activeEl.dataset.index) : 0;
+      dishNameEl.textContent = getName(dish.subItems[subIdx]);
+      foodMenu.querySelectorAll('.food-item span').forEach((span, i) => {
+        span.textContent = getName(dish.subItems[i]);
+      });
+    }
+
+    scene.addEventListener('arReady', () => { document.getElementById('loading').style.display = 'none'; });
+
+    const targetEl = document.getElementById('target-0');
+    const topPlane = document.getElementById('video-top-plane');
+    topPlane.setAttribute('visible', false); bottomPlane.setAttribute('visible', false);
+    let firstFound = true;
+    targetEl.addEventListener('targetFound', () => {
+      topPlane.setAttribute('visible', true); bottomPlane.setAttribute('visible', true);
+      dishSelector.style.display = 'block';
+      if (firstFound) { selectDish(0); firstFound = false; }
+      else { videoTop.currentTime = 0; videoTop.play().catch(() => {}); videoBottom.currentTime = 0; videoBottom.play().catch(() => {}); loaderTop.setAttribute('visible', false); loaderBottom.setAttribute('visible', false); bottomBar.style.display = 'block'; }
+    });
+    targetEl.addEventListener('targetLost', () => {
+      topPlane.setAttribute('visible', false); bottomPlane.setAttribute('visible', false);
+      dishSelector.style.display = 'none'; bottomBar.style.display = 'none';
+      videoTop.pause(); videoBottom.pause();
+      menuOpen = false; foodMenu.classList.remove('open'); logo.classList.remove('menu-open');
+    });
+  </script>
+</body>
+</html>
