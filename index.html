@@ -239,6 +239,21 @@
     }
     #sound-btn .icon { font-size: 18px; }
 
+    #lang-btn {
+      position: absolute; left: 20px; bottom: 12px;
+      width: 42px; height: 42px;
+      background: rgba(0,0,0,0.8);
+      border: 1.5px solid rgba(200,150,62,0.5);
+      border-radius: 50%;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10;
+      font-family: -apple-system, sans-serif;
+      font-size: 13px; font-weight: 700;
+      color: #c8963e;
+    }
+
     #food-menu {
       position: absolute; left: 50%; bottom: 33px;
       width: 0; height: 0;
@@ -306,6 +321,7 @@
 
     <div id="logo"><img src="./logomu.png" alt="MUU Steak House"></div>
     <button id="sound-btn"><span class="icon">🔇</span></button>
+    <button id="lang-btn">UZ</button>
   </div>
 
   <a-scene
@@ -318,7 +334,7 @@
 
     <a-assets>
       <video id="video-top" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous"
-        src="./mu2.mp4">
+        src="./MU2.mp4">
       </video>
       <video id="video-bottom" muted autoplay playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous">
       </video>
@@ -371,25 +387,25 @@
     // === Конфигурация блюд на этой странице меню ===
     const dishes = [
       {
-        name: 'Жаркое из телятины',
+        name: 'Жаркое из телятины', nameUz: "Buzoq go'shti qovurmasi",
         price: '200 000 сум',
-        topVideo: './mu2.mp4',
+        topVideo: './MU2.mp4',
         subItems: [
-          { name: 'Жаркое',  price: '200 000 сум', video: './1.mp4' },
-          { name: 'Стейк',   price: '180.-', video: './2.mp4' },
-          { name: 'Salat',    price: '45.-',  video: './Salat.mp4' },
-          { name: 'Coca-Cola', price: '15.-', video: './Cola.mp4' },
-          { name: 'Десерт',  price: '55.-',  video: './3.mp4' },
+          { name: 'Жаркое', nameUz: 'Qovurma', price: '200 000 сум', video: './1.mp4' },
+          { name: 'Стейк', nameUz: 'Steyk', price: '180.-', video: './2.mp4' },
+          { name: 'Salat', nameUz: 'Salat', price: '45.-', video: './Salat.mp4' },
+          { name: 'Coca-Cola', nameUz: 'Coca-Cola', price: '15.-', video: './Cola.mp4' },
+          { name: 'Десерт', nameUz: 'Desert', price: '55.-', video: './3.mp4' },
         ]
       },
       {
-        name: 'Каре ягнёнка',
+        name: 'Каре ягнёнка', nameUz: "Qo'zi qovurg'asi",
         price: '140 000 сум',
-        topVideo: './mu2.mp4',
+        topVideo: './MU2.mp4',
         subItems: [
-          { name: 'Каре',    price: '140 000 сум', video: './4.mp4' },
-          { name: 'Махи',    price: '65.-',  video: './5.mp4' },
-          { name: 'Десерт',  price: '55.-',  video: './6.mp4' },
+          { name: 'Каре', nameUz: "Qovurg'a", price: '140 000 сум', video: './4.mp4' },
+          { name: 'Махи', nameUz: 'Mahi', price: '65.-', video: './5.mp4' },
+          { name: 'Десерт', nameUz: 'Desert', price: '55.-', video: './6.mp4' },
         ]
       }
     ];
@@ -530,7 +546,7 @@
         const div = document.createElement('div');
         div.className = 'food-item' + (i === 0 ? ' active' : '');
         div.dataset.index = i;
-        div.innerHTML = `<span>${item.name}</span>`;
+        div.innerHTML = `<span>${getName(item)}</span>`;
 
         const count = items.length > 1 ? items.length - 1 : 1;
         const angle = startAngle + (endAngle - startAngle) * i / count;
@@ -546,7 +562,7 @@
           foodMenu.querySelectorAll('.food-item').forEach(fi => fi.classList.remove('active'));
           div.classList.add('active');
 
-          dishNameEl.textContent = item.name;
+          dishNameEl.textContent = getName(item);
           dishPriceEl.textContent = item.price;
           loadBottomVideo(item.video);
 
@@ -559,7 +575,7 @@
       });
 
       // Установить первый пункт
-      dishNameEl.textContent = items[0].name;
+      dishNameEl.textContent = getName(items[0]);
       dishPriceEl.textContent = items[0].price;
       loadBottomVideo(items[0].video);
     }
@@ -587,6 +603,36 @@
       videoBottom.muted = !videoBottom.muted;
       soundBtn.querySelector('.icon').textContent = videoBottom.muted ? '🔇' : '🔊';
     });
+
+    // === Язык ===
+    let currentLang = 'ru';
+    const langBtn = document.getElementById('lang-btn');
+    const loadingText = document.querySelector('#loading p');
+
+    function getName(item) {
+      return currentLang === 'uz' ? item.nameUz : item.name;
+    }
+
+    langBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      currentLang = currentLang === 'ru' ? 'uz' : 'ru';
+      langBtn.textContent = currentLang === 'ru' ? 'UZ' : 'RU';
+      loadingText.textContent = currentLang === 'ru' ? 'Наведите камеру на меню' : "Kamerani menyuga yo'naltiring";
+      refreshTexts();
+    });
+
+    function refreshTexts() {
+      document.querySelectorAll('.dish-tab').forEach((tab, i) => {
+        tab.querySelector('.tab-name').textContent = getName(dishes[i]);
+      });
+      const dish = dishes[activeDishIdx];
+      const activeEl = foodMenu.querySelector('.food-item.active');
+      const subIdx = activeEl ? parseInt(activeEl.dataset.index) : 0;
+      dishNameEl.textContent = getName(dish.subItems[subIdx]);
+      foodMenu.querySelectorAll('.food-item span').forEach((span, i) => {
+        span.textContent = getName(dish.subItems[i]);
+      });
+    }
 
     // === AR ===
     scene.addEventListener('arReady', () => {

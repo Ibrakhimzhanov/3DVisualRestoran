@@ -239,6 +239,21 @@
     }
     #sound-btn .icon { font-size: 18px; }
 
+    #lang-btn {
+      position: absolute; left: 20px; bottom: 12px;
+      width: 42px; height: 42px;
+      background: rgba(0,0,0,0.8);
+      border: 1.5px solid rgba(200,150,62,0.5);
+      border-radius: 50%;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10;
+      font-family: -apple-system, sans-serif;
+      font-size: 13px; font-weight: 700;
+      color: #c8963e;
+    }
+
     #food-menu {
       position: absolute; left: 50%; bottom: 33px;
       width: 0; height: 0;
@@ -306,6 +321,7 @@
 
     <div id="logo"><img src="./balzak.png" alt="Balzac Family"></div>
     <button id="sound-btn"><span class="icon">🔇</span></button>
+    <button id="lang-btn">UZ</button>
   </div>
 
   <a-scene
@@ -371,35 +387,35 @@
     // === Конфигурация блюд — Balzac Family ===
     const dishes = [
       {
-        name: 'Нисуаз с тунцом',
+        name: 'Нисуаз с тунцом', nameUz: 'Tunusli Nisuas salati',
         price: '130 000 сум',
         topVideo: './MU2.mp4',
         subItems: [
-          { name: 'Нисуаз',    price: '130 000 сум', video: './1.mp4' },
-          { name: 'Тунец',     price: '130 000 сум', video: './5.mp4' },
-          { name: 'Напиток',   price: '15 000 сум',  video: './Cola.mp4' },
-          { name: 'Салат',     price: '45 000 сум',  video: './Salat.mp4' },
+          { name: 'Нисуаз', nameUz: 'Nisuas', price: '130 000 сум', video: './1.mp4' },
+          { name: 'Тунец', nameUz: 'Tunes', price: '130 000 сум', video: './5.mp4' },
+          { name: 'Напиток', nameUz: 'Ichimlik', price: '15 000 сум', video: './Cola.mp4' },
+          { name: 'Салат', nameUz: 'Salat', price: '45 000 сум', video: './Salat.mp4' },
         ]
       },
       {
-        name: 'Теплый салат',
+        name: 'Теплый салат', nameUz: 'Issiq salat',
         price: '80 000 сум',
         topVideo: './MU2.mp4',
         subItems: [
-          { name: 'Т. Салат',  price: '80 000 сум',  video: './1.mp4' },
-          { name: 'Телятина',  price: '80 000 сум',  video: './2.mp4' },
-          { name: 'Напиток',   price: '15 000 сум',  video: './Cola.mp4' },
+          { name: 'Т. Салат', nameUz: 'I. Salat', price: '80 000 сум', video: './1.mp4' },
+          { name: 'Телятина', nameUz: "Buzoq go'shti", price: '80 000 сум', video: './2.mp4' },
+          { name: 'Напиток', nameUz: 'Ichimlik', price: '15 000 сум', video: './Cola.mp4' },
         ]
       },
       {
-        name: 'Салат с лососем',
+        name: 'Салат с лососем', nameUz: 'Lososli salat',
         price: '160 000 сум',
         topVideo: './MU2.mp4',
         subItems: [
-          { name: 'Лосось',   price: '160 000 сум', video: './6.mp4' },
-          { name: 'Авокадо',  price: '160 000 сум', video: './2.mp4' },
-          { name: 'Гарнир',   price: '160 000 сум', video: './4.mp4' },
-          { name: 'Десерт',   price: '55 000 сум',  video: './3.mp4' },
+          { name: 'Лосось', nameUz: 'Losos', price: '160 000 сум', video: './6.mp4' },
+          { name: 'Авокадо', nameUz: 'Avokado', price: '160 000 сум', video: './2.mp4' },
+          { name: 'Гарнир', nameUz: 'Garnir', price: '160 000 сум', video: './4.mp4' },
+          { name: 'Десерт', nameUz: 'Desert', price: '55 000 сум', video: './3.mp4' },
         ]
       }
     ];
@@ -540,7 +556,7 @@
         const div = document.createElement('div');
         div.className = 'food-item' + (i === 0 ? ' active' : '');
         div.dataset.index = i;
-        div.innerHTML = `<span>${item.name}</span>`;
+        div.innerHTML = `<span>${getName(item)}</span>`;
 
         const count = items.length > 1 ? items.length - 1 : 1;
         const angle = startAngle + (endAngle - startAngle) * i / count;
@@ -556,7 +572,7 @@
           foodMenu.querySelectorAll('.food-item').forEach(fi => fi.classList.remove('active'));
           div.classList.add('active');
 
-          dishNameEl.textContent = item.name;
+          dishNameEl.textContent = getName(item);
           dishPriceEl.textContent = item.price;
           loadBottomVideo(item.video);
 
@@ -569,7 +585,7 @@
       });
 
       // Установить первый пункт
-      dishNameEl.textContent = items[0].name;
+      dishNameEl.textContent = getName(items[0]);
       dishPriceEl.textContent = items[0].price;
       loadBottomVideo(items[0].video);
     }
@@ -597,6 +613,36 @@
       videoBottom.muted = !videoBottom.muted;
       soundBtn.querySelector('.icon').textContent = videoBottom.muted ? '🔇' : '🔊';
     });
+
+    // === Язык ===
+    let currentLang = 'ru';
+    const langBtn = document.getElementById('lang-btn');
+    const loadingText = document.querySelector('#loading p');
+
+    function getName(item) {
+      return currentLang === 'uz' ? item.nameUz : item.name;
+    }
+
+    langBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      currentLang = currentLang === 'ru' ? 'uz' : 'ru';
+      langBtn.textContent = currentLang === 'ru' ? 'UZ' : 'RU';
+      loadingText.textContent = currentLang === 'ru' ? 'Наведите камеру на меню' : "Kamerani menyuga yo'naltiring";
+      refreshTexts();
+    });
+
+    function refreshTexts() {
+      document.querySelectorAll('.dish-tab').forEach((tab, i) => {
+        tab.querySelector('.tab-name').textContent = getName(dishes[i]);
+      });
+      const dish = dishes[activeDishIdx];
+      const activeEl = foodMenu.querySelector('.food-item.active');
+      const subIdx = activeEl ? parseInt(activeEl.dataset.index) : 0;
+      dishNameEl.textContent = getName(dish.subItems[subIdx]);
+      foodMenu.querySelectorAll('.food-item span').forEach((span, i) => {
+        span.textContent = getName(dish.subItems[i]);
+      });
+    }
 
     // === AR ===
     scene.addEventListener('arReady', () => {
