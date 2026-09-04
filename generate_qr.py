@@ -33,44 +33,20 @@ border = 3
 color_main = (180, 50, 20)
 color_dark = (40, 25, 50)
 
-def draw_plate_finder(img, center_x, center_y, size):
-    plate = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    pd = ImageDraw.Draw(plate)
-    cx, cy = size // 2, size // 2
-    r = size // 2 - 2
+def draw_plate_finder(img, center_x, center_y, box):
+    """Позиционная метка QR: рамка 1 модуль, зазор 1 модуль, ядро 3x3.
+    Пропорции сканирующей линии 1:1:3:1:1 обязательны по стандарту,
+    декоративные кольца вместо них ломают распознавание."""
+    d = ImageDraw.Draw(img)
+    half = 3.5 * box
+    d.rectangle([center_x - half, center_y - half, center_x + half, center_y + half],
+                fill=(255, 255, 255, 255))
+    d.rounded_rectangle([center_x - half, center_y - half, center_x + half, center_y + half],
+                        radius=box * 1.2, outline=color_main, width=int(box))
+    core = 1.5 * box
+    d.rounded_rectangle([center_x - core, center_y - core, center_x + core, center_y + core],
+                        radius=box * 0.5, fill=color_main)
 
-    pd.ellipse([cx - r, cy - r, cx + r, cy + r], outline=color_main, width=int(r * 0.14))
-    mr = int(r * 0.75)
-    pd.ellipse([cx - mr, cy - mr, cx + mr, cy + mr], outline=color_dark, width=int(r * 0.06))
-    ir = int(r * 0.5)
-    pd.ellipse([cx - ir, cy - ir, cx + ir, cy + ir], fill=color_main)
-
-    fork_h = int(ir * 0.7)
-    fx = cx - int(ir * 0.25)
-    fy = cy - fork_h // 2
-    for t in range(-2, 3, 2):
-        pd.line([(fx + t, fy), (fx + t, fy + fork_h // 2)], fill="white", width=1)
-    pd.line([(fx - 3, fy + fork_h // 2), (fx + 3, fy + fork_h // 2)], fill="white", width=1)
-    pd.line([(fx, fy + fork_h // 2), (fx, fy + fork_h)], fill="white", width=2)
-
-    kx = cx + int(ir * 0.25)
-    ky = cy - fork_h // 2
-    pd.polygon([(kx - 2, ky), (kx + 3, ky + int(fork_h * 0.15)),
-                (kx + 2, ky + fork_h // 2), (kx - 2, ky + fork_h // 2)], fill="white")
-    pd.line([(kx, ky + fork_h // 2), (kx, ky + fork_h)], fill="white", width=2)
-
-    dot_r = int(r * 0.04)
-    for i in range(12):
-        angle = math.radians(i * 30)
-        dx = cx + int((r - int(r * 0.07)) * math.cos(angle))
-        dy = cy + int((r - int(r * 0.07)) * math.sin(angle))
-        pd.ellipse([dx - dot_r, dy - dot_r, dx + dot_r, dy + dot_r], fill=color_dark)
-
-    px = center_x - size // 2
-    py = center_y - size // 2
-    bg = Image.new("RGBA", (size + 8, size + 8), (255, 255, 255, 255))
-    img.paste(bg, (px - 4, py - 4))
-    img.paste(plate, (px, py), plate)
 
 finder_size_modules = 7
 finder_px = finder_size_modules * box
@@ -85,16 +61,16 @@ cy2 = border * box + finder_px // 2
 cx3 = border * box + finder_px // 2
 cy3 = (border + matrix_size - finder_size_modules) * box + finder_px // 2
 
-draw_plate_finder(qr_img, cx1, cy1, finder_px + 10)
-draw_plate_finder(qr_img, cx2, cy2, finder_px + 10)
-draw_plate_finder(qr_img, cx3, cy3, finder_px + 10)
+draw_plate_finder(qr_img, cx1, cy1, box)
+draw_plate_finder(qr_img, cx2, cy2, box)
+draw_plate_finder(qr_img, cx3, cy3, box)
 
 
 # === 3. Вставляем повара-картинку в центр ===
 chef_src = Image.open("J:/Cloude/3D AXROR/turkish-chef.png").convert("RGBA")
 
 # Размер повара — 30% от QR
-chef_size = int(qr_w * 0.32)
+chef_size = int(qr_w * 0.22)
 chef_src = chef_src.resize((chef_size, chef_size), Image.LANCZOS)
 
 # Белый круглый фон под повара чтобы QR точки не мешали
