@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#1a2612">
+  <title>Brest</title>
+  <link rel="icon" href="assets/brest/logo.png">
+  <link rel="stylesheet" href="engine/menulive.css?v=1">
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+</head>
+<body data-config="restaurants/brest.json">
+  <!-- Контейнер AR-сцены: MindAR кладёт видео камеры сюда же -->
+  <div id="ml-scene"></div>
+  <!-- Слой интерфейса -->
+  <div id="ml-root"></div>
+  <script type="module" src="engine/main.js?v=1"></script>
+</body>
+</html>
