@@ -1,0 +1,175 @@
+{
+  "id": "brest",
+  "name": "Brest",
+  "theme": { "bg": "#1a2612", "accent": "#c8a050", "accent2": "#e0c878", "text": "#ffffff" },
+  "logo": "assets/brest/logo.png",
+  "qr": "assets/brest/qr.png",
+  "target": {
+    "mind": "assets/brest/menu.mind",
+    "preview": "assets/brest/menu-preview.jpg"
+  },
+  "stage": {
+    "x": 0,
+    "y": 0.3,
+    "w": 1.05,
+    "key": "luma",
+    "luma": { "threshold": 0.1, "smoothing": 0.12 },
+    "chroma": { "color": "#00ff00", "similarity": 0.4, "smoothness": 0.1, "spill": 0.1 },
+    "feather": 0.06
+  },
+  "tracking": {
+    "filterMinCF": 0.0001,
+    "filterBeta": 0.5,
+    "missTolerance": 5,
+    "warmupTolerance": 0,
+    "smoothFactor": 0.02,
+    "posThreshold": 0.005,
+    "rotThreshold": 0.008
+  },
+  "languages": ["ru", "uz", "en"],
+  "defaultLang": "ru",
+  "autoLang": true,
+  "currency": { "ru": "сум", "uz": "so'm", "en": "UZS" },
+  "waiter": { "url": "" },
+  "reviewUrl": "",
+  "hotspots": false,
+  "categories": [
+    {
+      "id": "grill",
+      "name": { "ru": "Гриль", "uz": "Gril", "en": "Grill" },
+      "dishes": [
+        {
+          "id": "plato",
+          "name": { "ru": "Мясное плато Brest", "uz": "Brest go'sht platosi", "en": "Brest Meat Platter" },
+          "desc": {
+            "ru": "четыре вида мяса на углях, булгур, печёные овощи, три соуса",
+            "uz": "cho'g'da to'rt xil go'sht, bulg'ur, pishirilgan sabzavotlar, uchta sous",
+            "en": "four cuts over charcoal, bulgur, roasted vegetables, three sauces"
+          },
+          "price": 265000,
+          "weight": "980 г",
+          "kcal": 1240,
+          "tags": ["hit", "halal"],
+          "allergens": ["gluten", "sesame"],
+          "pairs": ["lemonade", "salat-brest"],
+          "promo": {
+            "ru": "Только в AR: соус от шефа в подарок",
+            "uz": "Faqat AR-da: shef sousi sovg'a",
+            "en": "AR only: chef sauce on the house"
+          },
+          "video": "assets/brest/plate.mp4",
+          "poster": "assets/brest/plate.jpg",
+          "key": "luma",
+          "audio": false
+        },
+        {
+          "id": "kebab",
+          "name": { "ru": "Кебаб на углях", "uz": "Cho'g'da kabob", "en": "Charcoal Kebab" },
+          "desc": {
+            "ru": "телятина и ягнёнок, красная капуста, булгур, гриль-перец",
+            "uz": "buzoq va qo'zi go'shti, qizil karam, bulg'ur, gril qalampir",
+            "en": "veal and lamb, red cabbage, bulgur, grilled pepper"
+          },
+          "price": 148000,
+          "weight": "420 г",
+          "kcal": 720,
+          "tags": ["halal", "spicy"],
+          "allergens": ["gluten"],
+          "pairs": ["lemonade"],
+          "video": "assets/brest/kebab.mp4",
+          "poster": "assets/brest/kebab.jpg",
+          "key": "luma",
+          "audio": false
+        },
+        {
+          "id": "ribeye",
+          "name": { "ru": "Рибай сухой выдержки", "uz": "Quruq yetiltirilgan ribay", "en": "Dry-Aged Ribeye" },
+          "desc": {
+            "ru": "выдержка 28 дней, соль фрер, розмарин, масло с костным мозгом",
+            "uz": "28 kun yetiltirilgan, dengiz tuzi, rozmarin, ilik yog'i",
+            "en": "aged 28 days, sea salt, rosemary, bone marrow butter"
+          },
+          "price": 320000,
+          "weight": "450 г",
+          "kcal": 980,
+          "tags": ["chef"],
+          "allergens": ["milk"],
+          "pairs": ["salat-brest"],
+          "video": "assets/brest/steak.mp4",
+          "poster": "assets/brest/steak.jpg",
+          "key": "none",
+          "audio": false
+        }
+      ]
+    },
+    {
+      "id": "sea",
+      "name": { "ru": "Море", "uz": "Dengiz", "en": "Sea" },
+      "dishes": [
+        {
+          "id": "salmon",
+          "name": { "ru": "Лосось на кедровой доске", "uz": "Sadr taxtasida qizil baliq", "en": "Cedar Plank Salmon" },
+          "desc": {
+            "ru": "филе лосося, лимонное масло, тимьян, подаётся на дымящейся доске",
+            "uz": "qizil baliq filesi, limon yog'i, kiyik o't, tutayotgan taxtada",
+            "en": "salmon fillet, lemon oil, thyme, served on a smoking plank"
+          },
+          "price": 210000,
+          "weight": "320 г",
+          "kcal": 610,
+          "tags": ["new", "chef"],
+          "allergens": ["fish"],
+          "pairs": ["salat-brest", "lemonade"],
+          "video": "assets/brest/salmon.mp4",
+          "poster": "assets/brest/salmon.jpg",
+          "key": "none",
+          "audio": false
+        }
+      ]
+    },
+    {
+      "id": "sides",
+      "name": { "ru": "Салаты и напитки", "uz": "Salatlar va ichimliklar", "en": "Salads and Drinks" },
+      "dishes": [
+        {
+          "id": "salat-brest",
+          "name": { "ru": "Салат Брест", "uz": "Brest salati", "en": "Brest Salad" },
+          "desc": {
+            "ru": "листья, томаты конфи, авокадо, кунжутная заправка",
+            "uz": "yashil barglar, konfi pomidor, avokado, kunjut sousi",
+            "en": "leaves, confit tomatoes, avocado, sesame dressing"
+          },
+          "price": 62000,
+          "weight": "240 г",
+          "kcal": 280,
+          "tags": ["veg"],
+          "allergens": ["sesame"],
+          "pairs": [],
+          "video": "assets/brest/salad.mp4",
+          "poster": "assets/brest/salad.jpg",
+          "key": "none",
+          "audio": false
+        },
+        {
+          "id": "lemonade",
+          "name": { "ru": "Лимонад домашний", "uz": "Uyda tayyorlangan limonad", "en": "House Lemonade" },
+          "desc": {
+            "ru": "лимон, мята, имбирь, лёд, графин 1 литр",
+            "uz": "limon, yalpiz, zanjabil, muz, 1 litrli grafin",
+            "en": "lemon, mint, ginger, ice, one litre carafe"
+          },
+          "price": 45000,
+          "weight": "1 л",
+          "kcal": 180,
+          "tags": ["veg", "new"],
+          "allergens": [],
+          "pairs": [],
+          "video": "assets/brest/drink.mp4",
+          "poster": "assets/brest/drink.jpg",
+          "key": "none",
+          "audio": false
+        }
+      ]
+    }
+  ]
+}

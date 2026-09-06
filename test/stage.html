@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MenuLive: проверка шейдера ml-key</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <style>
+    :root {
+      --bg: #14170f;
+      --panel: #1e2218;
+      --line: #33392b;
+      --text: #f2f2ee;
+      --muted: #9aa08e;
+      --accent: #c8a050;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .a-enter-vr, .a-enter-ar, .a-orientation-modal { display: none !important; }
+
+    header {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+    header span { color: var(--muted); font-size: 12px; }
+
+    #stage-wrap {
+      position: relative;
+      width: 100%;
+      height: 58vh;
+      min-height: 280px;
+      background-color: #0b0d08;
+      background-image: url('../image%20copy.png');
+      background-size: cover;
+      background-position: center;
+      overflow: hidden;
+    }
+    #stage-wrap.bg-checker {
+      background-image:
+        linear-gradient(45deg, #555 25%, transparent 25%),
+        linear-gradient(-45deg, #555 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #555 75%),
+        linear-gradient(-45deg, transparent 75%, #555 75%);
+      background-size: 32px 32px;
+      background-position: 0 0, 0 16px, 16px -16px, -16px 0;
+      background-color: #999;
+    }
+    #stage-wrap.bg-dark { background-image: none; background-color: #0b0d08; }
+    #stage-wrap a-scene { width: 100% !important; height: 100% !important; }
+
+    #banner {
+      display: none;
+      margin: 12px 16px;
+      padding: 12px 14px;
+      border: 1px solid #7a3b3b;
+      background: #2a1717;
+      border-radius: 10px;
+      color: #ffd7d7;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      padding: 14px 16px 24px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .row { margin-bottom: 12px; }
+    .row:last-child { margin-bottom: 0; }
+    .row label {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 5px;
+      font-size: 13px;
+    }
+    .row label b {
+      font-weight: 600;
+      color: var(--accent);
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    select, input[type="color"] {
+      width: 100%;
+      padding: 7px 8px;
+      background: #14170f;
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font: inherit;
+    }
+    input[type="color"] { padding: 2px; height: 34px; }
+    pre {
+      margin: 0;
+      padding: 10px;
+      background: #101309;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: #d8e0c8;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 12px;
+      overflow-x: auto;
+    }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 8px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Шейдер ml-key: подбор параметров</h1>
+    <span>без камеры и MindAR, плоскость поверх фото меню</span>
+  </header>
+
+  <div id="stage-wrap"></div>
+  <div id="banner"></div>
+
+  <div class="controls">
+    <div class="card">
+      <h2>Источник</h2>
+      <div class="row">
+        <label for="src">Видео</label>
+        <select id="src">
+          <option value="../1.mp4">1.mp4</option>
+          <option value="../2.mp4">2.mp4</option>
+          <option value="../Salat.mp4">Salat.mp4</option>
+          <option value="../Cola.mp4">Cola.mp4</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="bg">Фон</label>
+        <select id="bg">
+          <option value="menu">страница меню</option>
+          <option value="checker">шахматка</option>
+          <option value="dark">тёмный</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="mode">Режим ключа</label>
+        <select id="mode">
+          <option value="none">none (без прозрачности)</option>
+          <option value="luma" selected>luma (тёмный фон)</option>
+          <option value="chroma">chroma (зелёный фон)</option>
+        </select>
+      </div>
+      <p class="hint">Видео берутся из корня репозитория. Страницу открывать по http,
+        например <code>npx serve .</code> в корне и затем /test/stage.html</p>
+    </div>
+
+    <div class="card" id="luma-card">
+      <h2>Luma</h2>
+      <div class="row">
+        <label for="threshold">threshold <b id="threshold-val">0.10</b></label>
+        <input type="range" id="threshold" min="0" max="1" step="0.01" value="0.10">
+      </div>
+      <div class="row">
+        <label for="smoothing">smoothing <b id="smoothing-val">0.10</b></label>
+        <input type="range" id="smoothing" min="0" max="0.5" step="0.01" value="0.10">
+      </div>
+    </div>
+
+    <div class="card hidden" id="chroma-card">
+      <h2>Chroma</h2>
+      <div class="row">
+        <label for="color">color <b id="color-val">#00ff00</b></label>
+        <input type="color" id="color" value="#00ff00">
+      </div>
+      <div class="row">
+        <label for="similarity">similarity <b id="similarity-val">0.40</b></label>
+        <input type="range" id="similarity" min="0" max="1" step="0.01" value="0.40">
+      </div>
+      <div class="row">
+        <label for="smoothness">smoothness <b id="smoothness-val">0.10</b></label>
+        <input type="range" id="smoothness" min="0" max="0.5" step="0.01" value="0.10">
+      </div>
+      <div class="row">
+        <label for="spill">spill <b id="spill-val">0.10</b></label>
+        <input type="range" id="spill" min="0" max="1" step="0.01" value="0.10">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Края и размер</h2>
+      <div class="row">
+        <label for="feather">feather <b id="feather-val">0.08</b></label>
+        <input type="range" id="feather" min="0" max="0.3" step="0.005" value="0.08">
+      </div>
+      <div class="row">
+        <label for="width">ширина сцены <b id="width-val">1.60</b></label>
+        <input type="range" id="width" min="0.4" max="2.4" step="0.05" value="1.60">
+      </div>
+      <p class="hint" id="aspect-hint">пропорции видео: не известны</p>
+    </div>
+
+    <div class="card">
+      <h2>Значения для конфига</h2>
+      <pre id="out">-</pre>
+      <p class="hint">Скопировать в restaurants/&lt;ресторан&gt;.json, поле stage.</p>
+    </div>
+  </div>
+
+  <script type="module">
+    const wrap = document.getElementById('stage-wrap');
+    const banner = document.getElementById('banner');
+
+    const el = (id) => document.getElementById(id);
+    const ui = {
+      src: el('src'), bg: el('bg'), mode: el('mode'),
+      threshold: el('threshold'), smoothing: el('smoothing'),
+      color: el('color'), similarity: el('similarity'),
+      smoothness: el('smoothness'), spill: el('spill'),
+      feather: el('feather'), width: el('width'),
+      lumaCard: el('luma-card'), chromaCard: el('chroma-card'),
+      aspectHint: el('aspect-hint'), out: el('out')
+    };
+
+    function fail(err) {
+      banner.style.display = 'block';
+      banner.textContent = 'Не удалось поднять сцену.\n' + (err && err.stack ? err.stack : err);
+      console.error(err);
+    }
+
+    let plane = null;
+    let video = null;
+    let aspect = 16 / 9;
+
+    // Шейдер должен быть зарегистрирован до создания плоскости, поэтому сцена
+    // собирается только после успешного импорта движка.
+    try {
+      const ar = await import('../engine/ar.js');
+      ar.registerAll();
+      build();
+      apply();
+    } catch (err) {
+      fail(err);
+    }
+
+    function build() {
+      const scene = document.createElement('a-scene');
+      scene.setAttribute('embedded', '');
+      scene.setAttribute('background', 'transparent: true');
+      scene.setAttribute('color-space', 'sRGB');
+      scene.setAttribute('renderer', 'colorManagement: true');
+      scene.setAttribute('vr-mode-ui', 'enabled: false');
+      scene.setAttribute('device-orientation-permission-ui', 'enabled: false');
+      scene.setAttribute('loading-screen', 'enabled: false');
+
+      const assets = document.createElement('a-assets');
+      assets.setAttribute('timeout', '500');
+
+      video = document.createElement('video');
+      video.id = 'ml-video';
+      video.setAttribute('muted', '');
+      video.muted = true;
+      video.setAttribute('autoplay', '');
+      video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
+      video.setAttribute('loop', '');
+      video.setAttribute('preload', 'auto');
+      video.setAttribute('crossorigin', 'anonymous');
+      video.setAttribute('src', ui.src.value);
+      video.addEventListener('loadedmetadata', onMeta);
+      assets.appendChild(video);
+      scene.appendChild(assets);
+
+      const camera = document.createElement('a-camera');
+      camera.setAttribute('position', '0 0 1');
+      camera.setAttribute('look-controls', 'enabled: false');
+      camera.setAttribute('wasd-controls', 'enabled: false');
+      scene.appendChild(camera);
+
+      plane = document.createElement('a-plane');
+      plane.id = 'ml-stage';
+      plane.setAttribute('position', '0 0 0');
+      plane.setAttribute('width', 1.6);
+      plane.setAttribute('height', 0.9);
+      plane.setAttribute('material', {
+        shader: 'ml-key',
+        src: '#ml-video',
+        side: 'double',
+        transparent: true,
+        depthWrite: false
+      });
+      scene.appendChild(plane);
+
+      wrap.appendChild(scene);
+      video.play().catch(() => { /* автозапуск подхватится по первому клику */ });
+    }
+
+    function onMeta() {
+      if (video.videoWidth && video.videoHeight) {
+        aspect = video.videoWidth / video.videoHeight;
+        ui.aspectHint.textContent =
+          'пропорции видео: ' + video.videoWidth + 'x' + video.videoHeight +
+          ' (' + aspect.toFixed(3) + ')';
+        applySize();
+      }
+    }
+
+    function n(input) { return parseFloat(input.value); }
+    function f2(v) { return v.toFixed(2); }
+
+    function applySize() {
+      if (!plane) return;
+      const w = n(ui.width);
+      plane.setAttribute('width', w);
+      plane.setAttribute('height', w / aspect);
+      el('width-val').textContent = f2(w);
+    }
+
+    function apply() {
+      if (!plane) return;
+      const mode = ui.mode.value;
+      const isChroma = mode === 'chroma';
+      ui.chromaCard.classList.toggle('hidden', !isChroma);
+      ui.lumaCard.classList.toggle('hidden', mode !== 'luma');
+
+      plane.setAttribute('material', {
+        mode: mode === 'chroma' ? 2 : (mode === 'luma' ? 1 : 0),
+        threshold: n(ui.threshold),
+        smoothing: n(ui.smoothing),
+        keyColor: ui.color.value,
+        similarity: n(ui.similarity),
+        smoothness: n(ui.smoothness),
+        spill: n(ui.spill),
+        feather: n(ui.feather)
+      });
+
+      el('threshold-val').textContent = f2(n(ui.threshold));
+      el('smoothing-val').textContent = f2(n(ui.smoothing));
+      el('color-val').textContent = ui.color.value;
+      el('similarity-val').textContent = f2(n(ui.similarity));
+      el('smoothness-val').textContent = f2(n(ui.smoothness));
+      el('spill-val').textContent = f2(n(ui.spill));
+      el('feather-val').textContent = n(ui.feather).toFixed(3);
+
+      applySize();
+      printOut(mode);
+    }
+
+    function printOut(mode) {
+      const stage = {
+        key: mode,
+        luma: { threshold: +n(ui.threshold).toFixed(2), smoothing: +n(ui.smoothing).toFixed(2) },
+        chroma: {
+          color: ui.color.value,
+          similarity: +n(ui.similarity).toFixed(2),
+          smoothness: +n(ui.smoothness).toFixed(2),
+          spill: +n(ui.spill).toFixed(2)
+        },
+        feather: +n(ui.feather).toFixed(3)
+      };
+      ui.out.textContent = '"stage": ' + JSON.stringify(stage, null, 2);
+    }
+
+    ['threshold', 'smoothing', 'color', 'similarity', 'smoothness', 'spill', 'feather', 'width', 'mode']
+      .forEach((key) => ui[key].addEventListener('input', apply));
+
+    ui.src.addEventListener('change', () => {
+      if (!video) return;
+      video.src = ui.src.value;
+      video.load();
+      video.play().catch(() => { /* ждём клика */ });
+    });
+
+    ui.bg.addEventListener('change', () => {
+      wrap.classList.remove('bg-checker', 'bg-dark');
+      if (ui.bg.value === 'checker') wrap.classList.add('bg-checker');
+      if (ui.bg.value === 'dark') wrap.classList.add('bg-dark');
+    });
+
+    // Автозапуск видео на строгих браузерах: подхватываем по первому клику.
+    document.addEventListener('click', () => {
+      if (video && video.paused) video.play().catch(() => {});
+    }, { once: true });
+  </script>
+</body>
+</html>

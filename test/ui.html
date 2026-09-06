@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MenuLive UI: проверка вёрстки</title>
+<link rel="stylesheet" href="../engine/menulive.css">
+<style>
+  /* Только для этой служебной страницы: фон вместо камеры и панель переключателей. */
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: #222 url('../menu.jpg') center / cover no-repeat;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  .bar {
+    position: fixed; inset: 0 0 auto 0; z-index: 9999;
+    display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+    padding: 6px; background: #000; color: #fff; font-size: 11px;
+  }
+  .bar button { padding: 5px 8px; border: 0; border-radius: 6px; background: #333; color: #fff; font-size: 11px; cursor: pointer; }
+  .bar button:hover { background: #555; }
+  .bar b { margin-right: 4px; opacity: .6; font-weight: 600; }
+  /* сдвигаем интерфейс из-под панели */
+  .ml-root { top: 132px; }
+  #fail { position: fixed; inset: 132px 0 auto 0; z-index: 9998; padding: 16px; color: #fff; font-size: 14px; line-height: 1.5; }
+  #fail code { background: rgba(255,255,255,.12); padding: 1px 4px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="bar" id="bar">
+  <b>состояние:</b>
+  <button data-state="welcome">welcome</button>
+  <button data-state="starting">starting</button>
+  <button data-state="scanning">scanning</button>
+  <button data-state="found">found</button>
+  <button data-state="lost">lost</button>
+  <button data-state="nocam">nocam</button>
+  <b>ошибка:</b>
+  <button data-err="camera-denied">camera</button>
+  <button data-err="webview">webview</button>
+  <button data-err="desktop">desktop</button>
+  <button data-err="config">config</button>
+  <b>прочее:</b>
+  <button id="b-toast">toast</button>
+  <button id="b-sheet">лист заказа</button>
+  <button id="b-waiter">официант</button>
+  <button id="b-sound">звук</button>
+  <button id="b-mute">mute</button>
+  <button id="b-watch">watch</button>
+  <button id="b-lang">язык</button>
+</div>
+
+<div id="fail" hidden></div>
+<div id="ml"></div>
+
+<script type="module">
+// Тестовый конфиг: две категории, три блюда, теги, аллергены, пары, промо.
+const config = {
+  id: 'test',
+  name: 'Brest',
+  logo: '../brest.png',
+  qr: '../qr-code-brest.png',
+  target: { mind: '', preview: '../menu.jpg' },
+  languages: ['ru', 'uz', 'en'],
+  defaultLang: 'ru',
+  currency: { ru: 'сум', uz: "so'm", en: 'UZS' },
+  waiter: { url: 'https://t.me/menulive' },
+  reviewUrl: 'https://example.com/review',
+  categories: [
+    {
+      id: 'galettes',
+      name: { ru: 'Галеты', uz: 'Galetlar', en: 'Galettes' },
+      dishes: [
+        {
+          id: 'complete',
+          name: { ru: 'Галета Комплет', uz: 'Komplet galeta', en: 'Galette Complete' },
+          desc: {
+            ru: 'Гречневый блин на чугунной сковороде, ветчина, яйцо всмятку и выдержанный эмменталь. Подаётся с зелёным салатом и лёгкой горчичной заправкой.',
+            uz: 'Grechka blini, vetchina, tuxum va emmental pishlogʻi.',
+            en: 'Buckwheat crepe, ham, soft egg and aged emmental.'
+          },
+          price: 68000,
+          weight: '320 г',
+          kcal: 540,
+          tags: ['hit', 'halal'],
+          allergens: ['gluten', 'egg', 'milk'],
+          pairs: ['cider', 'salad'],
+          promo: { ru: 'Только в AR: комплимент от шефа', uz: 'Faqat AR-da', en: 'AR only' },
+          video: '../3.mp4'
+        },
+        {
+          id: 'salad',
+          name: { ru: 'Салат Брейз', uz: 'Breyz salati', en: 'Breizh Salad' },
+          desc: { ru: 'Микс салатов, козий сыр, груша и грецкий орех.', uz: 'Salat, echki pishlogʻi, nok.', en: 'Greens, goat cheese, pear.' },
+          price: 42000,
+          weight: '210 г',
+          kcal: 310,
+          tags: ['veg', 'new'],
+          allergens: ['nuts', 'milk'],
+          pairs: ['complete'],
+          video: '../2.mp4'
+        }
+      ]
+    },
+    {
+      id: 'drinks',
+      name: { ru: 'Напитки', uz: 'Ichimliklar', en: 'Drinks' },
+      dishes: [
+        {
+          id: 'cider',
+          name: { ru: 'Сидр яблочный', uz: 'Olma sidri', en: 'Apple Cider' },
+          desc: { ru: 'Полусухой, из бретонских яблок, подаётся в керамической чашке.', uz: 'Yarim quruq olma sidri.', en: 'Semi-dry Breton cider.' },
+          price: 26000,
+          weight: '330 мл',
+          kcal: 140,
+          tags: ['chef'],
+          allergens: [],
+          pairs: ['complete'],
+          video: '../3.mp4'
+        }
+      ]
+    }
+  ]
+};
+
+// Тема через переменные (как это делает main.js).
+const rootStyle = document.documentElement.style;
+rootStyle.setProperty('--ml-bg', '#1a2612');
+rootStyle.setProperty('--ml-accent', '#c8a050');
+rootStyle.setProperty('--ml-accent2', '#e0c878');
+rootStyle.setProperty('--ml-text', '#ffffff');
+
+const fail = document.getElementById('fail');
+
+// core/i18n.js и core/format.js пишет другой агент. Если их ещё нет,
+// импорт упадёт: это нормально, ошибка видна в консоли и на странице.
+import('../engine/ui.js').then(({ UI }) => start(UI)).catch((err) => {
+  console.error('[test/ui.html] модуль не загрузился:', err);
+  fail.hidden = false;
+  fail.innerHTML = 'Модуль не загрузился. Скорее всего ещё нет <code>engine/core/i18n.js</code> ' +
+    'или <code>engine/core/format.js</code>, либо страница открыта по <code>file://</code> ' +
+    '(ES-модули требуют http). Текст ошибки в консоли: <code>' + String(err && err.message || err) + '</code>';
+});
+
+function start(UI) {
+  const ui = new UI({ root: document.getElementById('ml'), config, lang: 'ru' });
+  window.ui = ui;
+
+  const dishes = config.categories.flatMap((c) => c.dishes.map((d) => Object.assign({ categoryId: c.id }, d)));
+  const order = new Map();
+  let category = 'galettes';
+  let active = 'complete';
+  let filter = null;
+
+  const dishById = (id) => dishes.find((d) => d.id === id);
+  const count = () => [...order.values()].reduce((a, b) => a + b, 0);
+  const total = () => [...order.entries()].reduce((a, [id, q]) => a + dishById(id).price * q, 0);
+  const sync = () => {
+    ui.renderOrder(count(), total());
+    ui.renderCard(dishById(active), order.get(active) || 0);
+  };
+  const bump = (id, d) => {
+    const next = (order.get(id) || 0) + d;
+    if (next > 0) order.set(id, next); else order.delete(id);
+    sync();
+  };
+
+  for (const name of ['start', 'nocam', 'lang', 'dish', 'category', 'filter', 'add', 'inc', 'dec',
+    'sound', 'share', 'review', 'retry', 'escape', 'watch', 'reset']) {
+    ui.on(name, (arg) => console.log('[ui]', name, arg === undefined ? '' : arg));
+  }
+
+  ui.on('start', () => {
+    ui.setState('starting');
+    setTimeout(() => ui.setState('scanning'), 1200);
+    setTimeout(() => ui.setState('found'), 3000);
+  });
+  ui.on('nocam', () => showNoCam());
+  ui.on('category', (id) => {
+    category = id;
+    filter = null;
+    active = config.categories.find((c) => c.id === id).dishes[0].id;
+    ui.renderCategories(category);
+    ui.renderDishes(category, active, filter);
+    sync();
+  });
+  ui.on('filter', (tag) => { filter = tag; ui.renderDishes(category, active, filter); });
+  ui.on('dish', (id) => { active = id; ui.renderDishes(category, active, filter); sync(); });
+  ui.on('add', (id) => bump(id, 1));
+  ui.on('inc', (id) => bump(id, 1));
+  ui.on('dec', (id) => bump(id, -1));
+  ui.on('reset', () => { order.clear(); sync(); });
+  ui.on('retry', () => ui.setState('scanning'));
+  ui.on('review', () => ui.toast('review click'));
+
+  function showNoCam() {
+    ui.setState('nocam');
+    if (!ui.noCamSlot().firstChild) {
+      const v = document.createElement('video');
+      v.src = '../3.mp4';
+      v.muted = true;
+      v.loop = true;
+      v.autoplay = true;
+      v.playsInline = true;
+      v.setAttribute('playsinline', '');
+      ui.noCamSlot().appendChild(v);
+    }
+    ui.renderCategories(category);
+    ui.renderDishes(category, active, filter);
+    sync();
+  }
+
+  document.getElementById('bar').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.state === 'nocam') return showNoCam();
+    if (b.dataset.state) {
+      ui.setState(b.dataset.state);
+      if (b.dataset.state === 'found' || b.dataset.state === 'lost') {
+        ui.renderCategories(category);
+        ui.renderDishes(category, active, filter);
+        sync();
+      }
+      return;
+    }
+    if (b.dataset.err) {
+      ui.setState('error', {
+        kind: b.dataset.err,
+        platform: 'ios',
+        escapeHref: 'x-safari-https://armenu.shumtuber.uz/brest.html',
+        qr: '../qr-code-brest.png',
+        detail: 'ConfigError: categories[0].dishes[2].video is required'
+      });
+      return;
+    }
+  });
+
+  document.getElementById('b-toast').onclick = () => ui.toast('Добавлено');
+  document.getElementById('b-sheet').onclick = () => ui.openOrderSheet(dishes, [...order.entries()].map(([dishId, qty]) => ({ dishId, qty })));
+  document.getElementById('b-waiter').onclick = () => ui.showWaiterScreen(dishes);
+  document.getElementById('b-sound').onclick = () => { window._snd = !window._snd; ui.setSoundVisible(window._snd); };
+  document.getElementById('b-mute').onclick = () => { window._mut = !window._mut; ui.setMuted(window._mut); };
+  document.getElementById('b-watch').onclick = () => { window._w = !window._w; ui.setWatchVisible(window._w); };
+  document.getElementById('b-lang').onclick = () => {
+    const i = config.languages.indexOf(ui.lang);
+    ui.setLang(config.languages[(i + 1) % config.languages.length]);
+  };
+
+  // стартовое наполнение
+  ui.renderCategories(category);
+  ui.renderDishes(category, active, filter);
+  sync();
+}
+</script>
+</body>
+</html>
