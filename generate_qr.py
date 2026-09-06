@@ -12,7 +12,7 @@ qr = qrcode.QRCode(
     box_size=20,
     border=3,
 )
-qr.add_data('https://armenu.shumtuber.uz')
+qr.add_data('https://armenu.shumtuber.uz/afra.html')
 qr.make(fit=True)
 
 qr_img = qr.make_image(
