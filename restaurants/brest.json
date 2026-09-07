@@ -1,7 +1,12 @@
 {
   "id": "brest",
   "name": "Brest",
-  "theme": { "bg": "#1a2612", "accent": "#c8a050", "accent2": "#e0c878", "text": "#ffffff" },
+  "theme": {
+    "bg": "#12100E",
+    "accent": "#F2B24C",
+    "accent2": "#46C6A8",
+    "text": "#FFFFFF"
+  },
   "logo": "assets/brest/logo.png",
   "qr": "assets/brest/qr.png",
   "target": {
@@ -13,8 +18,16 @@
     "y": 0.3,
     "w": 1.05,
     "key": "luma",
-    "luma": { "threshold": 0.1, "smoothing": 0.12 },
-    "chroma": { "color": "#00ff00", "similarity": 0.4, "smoothness": 0.1, "spill": 0.1 },
+    "luma": {
+      "threshold": 0.1,
+      "smoothing": 0.12
+    },
+    "chroma": {
+      "color": "#00ff00",
+      "similarity": 0.4,
+      "smoothness": 0.1,
+      "spill": 0.1
+    },
     "feather": 0.06
   },
   "tracking": {
@@ -26,21 +39,39 @@
     "posThreshold": 0.005,
     "rotThreshold": 0.008
   },
-  "languages": ["ru", "uz", "en"],
+  "languages": [
+    "ru",
+    "uz",
+    "en"
+  ],
   "defaultLang": "ru",
   "autoLang": true,
-  "currency": { "ru": "сум", "uz": "so'm", "en": "UZS" },
-  "waiter": { "url": "" },
+  "currency": {
+    "ru": "сум",
+    "uz": "so'm",
+    "en": "UZS"
+  },
+  "waiter": {
+    "url": ""
+  },
   "reviewUrl": "",
   "hotspots": false,
   "categories": [
     {
       "id": "grill",
-      "name": { "ru": "Гриль", "uz": "Gril", "en": "Grill" },
+      "name": {
+        "ru": "Гриль",
+        "uz": "Gril",
+        "en": "Grill"
+      },
       "dishes": [
         {
           "id": "plato",
-          "name": { "ru": "Мясное плато Brest", "uz": "Brest go'sht platosi", "en": "Brest Meat Platter" },
+          "name": {
+            "ru": "Мясное плато Brest",
+            "uz": "Brest go'sht platosi",
+            "en": "Brest Meat Platter"
+          },
           "desc": {
             "ru": "четыре вида мяса на углях, булгур, печёные овощи, три соуса",
             "uz": "cho'g'da to'rt xil go'sht, bulg'ur, pishirilgan sabzavotlar, uchta sous",
@@ -49,9 +80,18 @@
           "price": 265000,
           "weight": "980 г",
           "kcal": 1240,
-          "tags": ["hit", "halal"],
-          "allergens": ["gluten", "sesame"],
-          "pairs": ["lemonade", "salat-brest"],
+          "tags": [
+            "hit",
+            "halal"
+          ],
+          "allergens": [
+            "gluten",
+            "sesame"
+          ],
+          "pairs": [
+            "lemonade",
+            "salat-brest"
+          ],
           "promo": {
             "ru": "Только в AR: соус от шефа в подарок",
             "uz": "Faqat AR-da: shef sousi sovg'a",
@@ -64,7 +104,11 @@
         },
         {
           "id": "kebab",
-          "name": { "ru": "Кебаб на углях", "uz": "Cho'g'da kabob", "en": "Charcoal Kebab" },
+          "name": {
+            "ru": "Кебаб на углях",
+            "uz": "Cho'g'da kabob",
+            "en": "Charcoal Kebab"
+          },
           "desc": {
             "ru": "телятина и ягнёнок, красная капуста, булгур, гриль-перец",
             "uz": "buzoq va qo'zi go'shti, qizil karam, bulg'ur, gril qalampir",
@@ -73,9 +117,16 @@
           "price": 148000,
           "weight": "420 г",
           "kcal": 720,
-          "tags": ["halal", "spicy"],
-          "allergens": ["gluten"],
-          "pairs": ["lemonade"],
+          "tags": [
+            "halal",
+            "spicy"
+          ],
+          "allergens": [
+            "gluten"
+          ],
+          "pairs": [
+            "lemonade"
+          ],
           "video": "assets/brest/kebab.mp4",
           "poster": "assets/brest/kebab.jpg",
           "key": "luma",
@@ -83,7 +134,11 @@
         },
         {
           "id": "ribeye",
-          "name": { "ru": "Рибай сухой выдержки", "uz": "Quruq yetiltirilgan ribay", "en": "Dry-Aged Ribeye" },
+          "name": {
+            "ru": "Рибай сухой выдержки",
+            "uz": "Quruq yetiltirilgan ribay",
+            "en": "Dry-Aged Ribeye"
+          },
           "desc": {
             "ru": "выдержка 28 дней, соль фрер, розмарин, масло с костным мозгом",
             "uz": "28 kun yetiltirilgan, dengiz tuzi, rozmarin, ilik yog'i",
@@ -92,23 +147,37 @@
           "price": 320000,
           "weight": "450 г",
           "kcal": 980,
-          "tags": ["chef"],
-          "allergens": ["milk"],
-          "pairs": ["salat-brest"],
+          "tags": [
+            "chef"
+          ],
+          "allergens": [
+            "milk"
+          ],
+          "pairs": [
+            "salat-brest"
+          ],
           "video": "assets/brest/steak.mp4",
           "poster": "assets/brest/steak.jpg",
-          "key": "none",
+          "key": "luma",
           "audio": false
         }
       ]
     },
     {
       "id": "sea",
-      "name": { "ru": "Море", "uz": "Dengiz", "en": "Sea" },
+      "name": {
+        "ru": "Море",
+        "uz": "Dengiz",
+        "en": "Sea"
+      },
       "dishes": [
         {
           "id": "salmon",
-          "name": { "ru": "Лосось на кедровой доске", "uz": "Sadr taxtasida qizil baliq", "en": "Cedar Plank Salmon" },
+          "name": {
+            "ru": "Лосось на кедровой доске",
+            "uz": "Sadr taxtasida qizil baliq",
+            "en": "Cedar Plank Salmon"
+          },
           "desc": {
             "ru": "филе лосося, лимонное масло, тимьян, подаётся на дымящейся доске",
             "uz": "qizil baliq filesi, limon yog'i, kiyik o't, tutayotgan taxtada",
@@ -117,23 +186,39 @@
           "price": 210000,
           "weight": "320 г",
           "kcal": 610,
-          "tags": ["new", "chef"],
-          "allergens": ["fish"],
-          "pairs": ["salat-brest", "lemonade"],
+          "tags": [
+            "new",
+            "chef"
+          ],
+          "allergens": [
+            "fish"
+          ],
+          "pairs": [
+            "salat-brest",
+            "lemonade"
+          ],
           "video": "assets/brest/salmon.mp4",
           "poster": "assets/brest/salmon.jpg",
-          "key": "none",
+          "key": "luma",
           "audio": false
         }
       ]
     },
     {
       "id": "sides",
-      "name": { "ru": "Салаты и напитки", "uz": "Salatlar va ichimliklar", "en": "Salads and Drinks" },
+      "name": {
+        "ru": "Салаты и напитки",
+        "uz": "Salatlar va ichimliklar",
+        "en": "Salads and Drinks"
+      },
       "dishes": [
         {
           "id": "salat-brest",
-          "name": { "ru": "Салат Брест", "uz": "Brest salati", "en": "Brest Salad" },
+          "name": {
+            "ru": "Салат Брест",
+            "uz": "Brest salati",
+            "en": "Brest Salad"
+          },
           "desc": {
             "ru": "листья, томаты конфи, авокадо, кунжутная заправка",
             "uz": "yashil barglar, konfi pomidor, avokado, kunjut sousi",
@@ -142,8 +227,12 @@
           "price": 62000,
           "weight": "240 г",
           "kcal": 280,
-          "tags": ["veg"],
-          "allergens": ["sesame"],
+          "tags": [
+            "veg"
+          ],
+          "allergens": [
+            "sesame"
+          ],
           "pairs": [],
           "video": "assets/brest/salad.mp4",
           "poster": "assets/brest/salad.jpg",
@@ -152,7 +241,11 @@
         },
         {
           "id": "lemonade",
-          "name": { "ru": "Лимонад домашний", "uz": "Uyda tayyorlangan limonad", "en": "House Lemonade" },
+          "name": {
+            "ru": "Лимонад домашний",
+            "uz": "Uyda tayyorlangan limonad",
+            "en": "House Lemonade"
+          },
           "desc": {
             "ru": "лимон, мята, имбирь, лёд, графин 1 литр",
             "uz": "limon, yalpiz, zanjabil, muz, 1 litrli grafin",
@@ -161,12 +254,15 @@
           "price": 45000,
           "weight": "1 л",
           "kcal": 180,
-          "tags": ["veg", "new"],
+          "tags": [
+            "veg",
+            "new"
+          ],
           "allergens": [],
           "pairs": [],
           "video": "assets/brest/drink.mp4",
           "poster": "assets/brest/drink.jpg",
-          "key": "none",
+          "key": "luma",
           "audio": false
         }
       ]

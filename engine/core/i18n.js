@@ -90,6 +90,7 @@ const DICT = {
   'order.total': { ru: 'Итого', uz: 'Jami', en: 'Total' },
   'order.done': { ru: 'Готово', uz: 'Tayyor', en: 'Done' },
   'order.title': { ru: 'Ваш выбор', uz: 'Sizning tanlovingiz', en: 'Your selection' },
+  'order.open': { ru: 'Открыть', uz: 'Ochish', en: 'Open' },
   'order.empty': { ru: 'Пока пусто', uz: "Hozircha bo'sh", en: 'Nothing here yet' },
   'error.camera.title': {
     ru: 'Нет доступа к камере',

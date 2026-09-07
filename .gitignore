@@ -2,3 +2,9 @@ node_modules/
 /compile.mjs
 /package.json
 /package-lock.json
+.env
+.env.*
+secrets/
+remotion-sandbox/out/
+remotion-sandbox/public/brest/
+media-out/*-silent.mp4

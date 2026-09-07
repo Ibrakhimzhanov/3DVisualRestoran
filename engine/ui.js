@@ -3,23 +3,16 @@
 // лента блюд, карточка, плашка и лист заказа, экран официанта, ошибки, тосты.
 // Состояния переключаются классами ml-state-* на корневом элементе, без инлайнового display.
 import { Emitter } from './core/emitter.js';
-import { pick, t, dishCountLabel, TAG_ICONS } from './core/i18n.js';
+import { pick, t, dishCountLabel } from './core/i18n.js';
 import { price as fmtPrice, kcal as fmtKcal } from './core/format.js';
+import { ICONS, ERROR_ICONS } from './icons.js';
 
 const STATES = ['welcome', 'starting', 'scanning', 'found', 'lost', 'nocam', 'error'];
 const SCAN_TIP_MS = 8000; // суммарное время сканирования до второго совета
 const TOAST_MS = 2000;
 const DOT = ' · '; // точка-разделитель с неразрывными пробелами
 const HIDDEN = 'ml-hidden';
-
-const ICON = {
-  share: '↗',
-  sound: '\u{1F50A}',
-  muted: '\u{1F507}',
-  close: '✕',
-  minus: '−',
-  plus: '+'
-};
+const LANGS_ALL = ['ru', 'uz', 'en']; // чтобы узнать текст тоста об ошибке видео на любом языке
 
 // Короткий конструктор узла.
 function h(tag, cls, text) {
@@ -29,12 +22,26 @@ function h(tag, cls, text) {
   return node;
 }
 
+// Обёртка вокруг иконки. Разметка своя, статичная, из icons.js.
+function icon(markup, small) {
+  const node = h('span', small ? 'ml-i ml-i--sm' : 'ml-i');
+  node.innerHTML = markup || '';
+  return node;
+}
+
 // Кнопка с обработчиком тапа.
 function btn(cls, text, onTap, label) {
   const node = h('button', cls, text);
   node.type = 'button';
   if (label) node.setAttribute('aria-label', label);
   if (onTap) node.addEventListener('click', onTap);
+  return node;
+}
+
+// Кнопка, у которой вместо текста иконка.
+function iconBtn(cls, markup, onTap, label) {
+  const node = btn(cls, null, onTap, label);
+  node.appendChild(icon(markup));
   return node;
 }
 
@@ -181,8 +188,8 @@ export class UI extends Emitter {
     n.cats = h('div', 'ml-cats ml-scroller');
     n.actions = h('div', 'ml-header__actions');
     n.langBtn = btn('ml-icon ml-icon--lang', '', () => this._cycleLang());
-    n.shareBtn = btn('ml-icon ml-icon--share', ICON.share, () => this.emit('share'));
-    n.soundBtn = btn('ml-icon ml-icon--sound', ICON.sound, () => this.emit('sound'));
+    n.shareBtn = iconBtn('ml-icon ml-icon--share', ICONS.share, () => this.emit('share'));
+    n.soundBtn = iconBtn('ml-icon ml-icon--sound', ICONS.soundOn, () => this.emit('sound'), 'sound');
     n.soundBtn.classList.add(HIDDEN);
     n.actions.append(n.langBtn, n.shareBtn, n.soundBtn);
     n.headerRow.append(n.cats, n.actions);
@@ -213,21 +220,29 @@ export class UI extends Emitter {
     n.nocamTitle = h('div', 'ml-nocam__title');
     n.nocamSlot = h('div', 'ml-nocam__slot');
     n.nocam.append(n.nocamTitle, n.nocamSlot);
-    n.mid.append(n.scan, n.watch, n.nocam);
+    // тост живёт в свободном центре: снизу его перекрыла бы карточка блюда
+    n.toast = h('div', 'ml-toast');
+    n.mid.append(n.scan, n.watch, n.nocam, n.toast);
 
     // низ: плашка заказа, лента блюд, карточка
     n.bottom = h('div', 'ml-bottom');
-    n.orderPill = btn('ml-order', '', () => this.openOrderSheet(this._sheetDishes || this._dishes));
+    // Плашка заказа: лист открывает и кнопка справа, и тап по самой плашке.
+    n.orderPill = h('div', 'ml-order');
+    n.orderPill.addEventListener('click', () => this._openSheet());
+    n.orderText = h('span', 'ml-order__text');
+    n.orderOpen = btn('ml-order__open', '', (e) => {
+      e.stopPropagation();
+      this._openSheet();
+    });
+    n.orderPill.append(n.orderText, n.orderOpen);
     n.strip = h('div', 'ml-strip ml-scroller');
     n.card = h('div', 'ml-card');
     n.cardPromo = h('div', 'ml-card__promo');
     n.cardTop = h('div', 'ml-card__top');
-    n.cardHead = h('div', 'ml-card__head');
     n.cardTitle = h('div', 'ml-card__title');
-    n.cardMeta = h('div', 'ml-card__meta');
-    n.cardHead.append(n.cardTitle, n.cardMeta);
     n.cardPrice = h('div', 'ml-card__price');
-    n.cardTop.append(n.cardHead, n.cardPrice);
+    n.cardTop.append(n.cardTitle, n.cardPrice);
+    n.cardMeta = h('div', 'ml-card__meta');
     n.cardDesc = btn('ml-card__desc', '', () => this._toggleDesc());
     n.cardAllergens = h('div', 'ml-card__allergens');
     n.cardFoot = h('div', 'ml-card__foot');
@@ -235,13 +250,13 @@ export class UI extends Emitter {
     n.cardActions = h('div', 'ml-card__actions');
     n.addBtn = btn('ml-btn ml-btn--add', '', () => this._onAdd());
     n.stepper = h('div', 'ml-stepper');
-    n.stepMinus = btn('ml-stepper__btn', ICON.minus, () => this._onStep(-1), 'minus');
+    n.stepMinus = iconBtn('ml-stepper__btn', ICONS.minus, () => this._onStep(-1), 'minus');
     n.stepQty = h('span', 'ml-stepper__qty', '0');
-    n.stepPlus = btn('ml-stepper__btn', ICON.plus, () => this._onStep(1), 'plus');
+    n.stepPlus = iconBtn('ml-stepper__btn', ICONS.plus, () => this._onStep(1), 'plus');
     n.stepper.append(n.stepMinus, n.stepQty, n.stepPlus);
     n.cardActions.append(n.addBtn, n.stepper);
     n.cardFoot.append(n.cardPairs, n.cardActions);
-    n.card.append(n.cardPromo, n.cardTop, n.cardDesc, n.cardAllergens, n.cardFoot);
+    n.card.append(n.cardPromo, n.cardTop, n.cardMeta, n.cardDesc, n.cardAllergens, n.cardFoot);
     n.bottom.append(n.orderPill, n.strip, n.card);
 
     // лист заказа
@@ -249,9 +264,10 @@ export class UI extends Emitter {
     n.sheetBack = h('div', 'ml-sheet__backdrop');
     n.sheetBack.addEventListener('click', () => this.closeOrderSheet());
     n.sheetPanel = h('div', 'ml-sheet__panel');
+    n.sheetGrip = h('div', 'ml-sheet__grip');
     n.sheetHead = h('div', 'ml-sheet__head');
     n.sheetTitle = h('h2', 'ml-sheet__title');
-    n.sheetClose = btn('ml-icon ml-sheet__close', ICON.close, () => this.closeOrderSheet(), 'close');
+    n.sheetClose = iconBtn('ml-icon ml-sheet__close', ICONS.close, () => this.closeOrderSheet(), 'close');
     n.sheetHead.append(n.sheetTitle, n.sheetClose);
     n.sheetList = h('div', 'ml-sheet__list');
     n.sheetEmpty = h('div', 'ml-sheet__empty');
@@ -266,7 +282,7 @@ export class UI extends Emitter {
     n.sheetWrite.rel = 'noopener noreferrer';
     n.sheetReview = btn('ml-btn ml-btn--ghost ml-sheet__review', '', () => this.emit('review'));
     n.sheetActions.append(n.sheetShow, n.sheetWrite, n.sheetReview);
-    n.sheetPanel.append(n.sheetHead, n.sheetList, n.sheetEmpty, n.sheetTotal, n.sheetActions);
+    n.sheetPanel.append(n.sheetGrip, n.sheetHead, n.sheetList, n.sheetEmpty, n.sheetTotal, n.sheetActions);
     n.sheet.append(n.sheetBack, n.sheetPanel);
 
     // экран официанта
@@ -282,19 +298,17 @@ export class UI extends Emitter {
     // ошибки
     n.error = h('div', 'ml-error');
     n.errBox = h('div', 'ml-error__box');
+    n.errIcon = h('div', 'ml-error__icon');
     n.errTitle = h('h2', 'ml-error__title');
     n.errBody = h('p', 'ml-error__body');
     n.errQr = h('img', 'ml-error__qr');
     n.errQr.alt = '';
     n.errDetail = h('pre', 'ml-error__detail');
     n.errActions = h('div', 'ml-error__actions');
-    n.errBox.append(n.errTitle, n.errBody, n.errQr, n.errDetail, n.errActions);
+    n.errBox.append(n.errIcon, n.errTitle, n.errBody, n.errQr, n.errDetail, n.errActions);
     n.error.appendChild(n.errBox);
 
-    // тост
-    n.toast = h('div', 'ml-toast');
-
-    this._mounted = [n.welcome, n.header, n.mid, n.bottom, n.sheet, n.waiter, n.error, n.toast];
+    this._mounted = [n.welcome, n.header, n.mid, n.bottom, n.sheet, n.waiter, n.error];
     for (const node of this._mounted) this.root.appendChild(node);
     this._renderLangs();
   }
@@ -312,6 +326,7 @@ export class UI extends Emitter {
     n.watchBtn.textContent = this._t('watch.button');
     n.nocamTitle.textContent = this._t('nocam.title');
     n.shareBtn.setAttribute('aria-label', this._t('share.button'));
+    n.orderOpen.textContent = this._t('order.open');
     n.sheetTitle.textContent = this._t('order.title');
     n.sheetEmpty.textContent = this._t('order.empty');
     n.sheetTotalLabel.textContent = this._t('order.total');
@@ -457,13 +472,14 @@ export class UI extends Emitter {
     all.classList.toggle('is-active', !this._filter);
     box.appendChild(all);
     for (const tag of tags) {
-      const label = (TAG_ICONS && TAG_ICONS[tag] ? TAG_ICONS[tag] + ' ' : '') + this._t('tag.' + tag);
-      const chip = btn('ml-chip', label, () => {
+      const chip = btn('ml-chip', null, () => {
         const next = this._filter === tag ? null : tag;
         this.emit('filter', next);
         this._filter = next;
         this._markActive(box, next || '');
       });
+      if (ICONS[tag]) chip.appendChild(icon(ICONS[tag], true));
+      chip.appendChild(h('span', 'ml-chip__label', this._t('tag.' + tag)));
       chip.dataset.id = tag;
       chip.classList.toggle('is-active', this._filter === tag);
       box.appendChild(chip);
@@ -546,8 +562,7 @@ export class UI extends Emitter {
       const tagBox = h('span', 'ml-tags');
       for (const tag of tags) {
         const item = h('span', 'ml-tag');
-        const icon = TAG_ICONS && TAG_ICONS[tag];
-        if (icon) item.appendChild(h('span', 'ml-tag__icon', icon));
+        if (ICONS[tag]) item.appendChild(icon(ICONS[tag], true));
         item.appendChild(h('span', 'ml-tag__label', this._t('tag.' + tag)));
         tagBox.appendChild(item);
       }
@@ -625,10 +640,15 @@ export class UI extends Emitter {
     this._total = Number(total) || 0;
     // заказ обнулили снаружи: чистим и локальные количества
     if (this._count === 0) this._qty.clear();
-    this._nodes.orderPill.textContent = this._count
+    this._nodes.orderText.textContent = this._count
       ? dishCountLabel(this._count, this.lang) + DOT + this._price(this._total)
       : '';
     this.root.classList.toggle('ml-has-order', this._count > 0);
+  }
+
+  // Открыть лист заказа: и кнопкой «Открыть», и тапом по плашке.
+  _openSheet() {
+    this.openOrderSheet(this._sheetDishes || this._dishes);
   }
 
   // ---------- лист заказа ----------
@@ -681,9 +701,9 @@ export class UI extends Emitter {
       line.appendChild(h('span', 'ml-line__name', this._pick(row.dish.name)));
       const stepper = h('div', 'ml-stepper ml-stepper--sm');
       stepper.append(
-        btn('ml-stepper__btn', ICON.minus, () => this._sheetStep(row.dish.id, -1), 'minus'),
+        iconBtn('ml-stepper__btn', ICONS.minus, () => this._sheetStep(row.dish.id, -1), 'minus'),
         h('span', 'ml-stepper__qty', String(row.qty)),
-        btn('ml-stepper__btn', ICON.plus, () => this._sheetStep(row.dish.id, 1), 'plus')
+        iconBtn('ml-stepper__btn', ICONS.plus, () => this._sheetStep(row.dish.id, 1), 'plus')
       );
       line.appendChild(stepper);
       line.appendChild(h('span', 'ml-line__sum', this._price((Number(row.dish.price) || 0) * row.qty)));
@@ -747,8 +767,15 @@ export class UI extends Emitter {
     n.errBody.classList.remove(HIDDEN);
 
     const nocamLink = () => btn('ml-link', this._t('welcome.nocam'), () => this.emit('nocam'));
+    // Иконка в квадрате. Красная рамка только у ошибки камеры.
+    const setIcon = (markup, isError) => {
+      n.errIcon.textContent = '';
+      n.errIcon.appendChild(icon(markup));
+      n.errIcon.classList.toggle('is-error', Boolean(isError));
+    };
 
     if (kind === 'camera-denied' || kind === 'camera-unavailable') {
+      setIcon(ERROR_ICONS.camera, true);
       n.errTitle.textContent = this._t('error.camera.title');
       n.errBody.textContent = this._t('error.camera.body');
       n.errActions.append(
@@ -759,6 +786,7 @@ export class UI extends Emitter {
     }
 
     if (kind === 'webview') {
+      setIcon(ERROR_ICONS.browser, false);
       n.errTitle.textContent = this._t('error.webview.title');
       n.errBody.textContent = this._t('error.webview.body');
       const isIos = (detail.detail && detail.detail.platform) === 'ios' || detail.platform === 'ios';
@@ -778,6 +806,7 @@ export class UI extends Emitter {
     }
 
     if (kind === 'desktop') {
+      setIcon(ERROR_ICONS.phone, false);
       n.errTitle.textContent = this._t('error.desktop.title');
       n.errBody.textContent = this._t('error.desktop.body');
       const qr = detail.qr || this.config.qr;
@@ -789,6 +818,7 @@ export class UI extends Emitter {
     }
 
     // config и всё неизвестное
+    setIcon(ERROR_ICONS.alert, false);
     n.errTitle.textContent = this._t('error.config.title');
     n.errBody.classList.add(HIDDEN);
     const text = typeof detail.detail === 'string' ? detail.detail : (detail.detail ? String(detail.detail.message || detail.detail) : '');
@@ -802,7 +832,12 @@ export class UI extends Emitter {
 
   toast(text) {
     const n = this._nodes.toast;
-    n.textContent = text == null ? '' : String(text);
+    const value = text == null ? '' : String(text);
+    n.textContent = value;
+    // Тост об ошибке видео красный. Контракт toast(text) один аргумент,
+    // поэтому узнаём его по самому тексту на любом из трёх языков.
+    const isError = value !== '' && LANGS_ALL.some((code) => value === t('error.video', code));
+    n.classList.toggle('is-error', isError);
     n.classList.add('is-visible');
     if (this._toastTimer) clearTimeout(this._toastTimer);
     this._toastTimer = setTimeout(() => {
@@ -816,8 +851,10 @@ export class UI extends Emitter {
   }
 
   setMuted(b) {
-    this._nodes.soundBtn.textContent = b ? ICON.muted : ICON.sound;
-    this._nodes.soundBtn.classList.toggle('is-muted', Boolean(b));
+    const node = this._nodes.soundBtn;
+    node.textContent = '';
+    node.appendChild(icon(b ? ICONS.soundOff : ICONS.soundOn));
+    node.classList.toggle('is-muted', Boolean(b));
   }
 
   setWatchVisible(b) {

@@ -1,38 +1,66 @@
-/* MenuLive UI. Все цвета берутся только из переменных темы:
-   --ml-bg, --ml-accent, --ml-accent2, --ml-text.
+/* MenuLive UI. Интерфейс это плёнка поверх живой камеры:
+   тёмные непрозрачные плашки, полновесный белый текст, свободный центр.
+   Полупрозрачного текста нет нигде, прозрачность только у подложек и линий.
    Классы с префиксом ml-, чтобы не конфликтовать с A-Frame. */
 
-/* ---------- 1. Переменные темы ---------- */
+/* ---------- 1. Токены ---------- */
 
 :root {
-  --ml-bg: #14181c;
-  --ml-accent: #c8a050;
-  --ml-accent2: #e0c878;
-  --ml-text: #ffffff;
-}
+  /* Старые имена. Их выставляет main.js из темы ресторана,
+     поэтому они остаются входной точкой перекраски под бренд. */
+  --ml-bg: #12100E;
+  --ml-accent: #F2B24C;
+  --ml-accent2: #46C6A8;
+  --ml-text: #FFFFFF;
 
-/* Производные оттенки. Без color-mix панели просто непрозрачные. */
-.ml-root {
-  --ml-panel: var(--ml-bg);
-  --ml-panel-strong: var(--ml-bg);
-  --ml-veil: var(--ml-bg);
-  --ml-soft: var(--ml-bg);
-  --ml-line: var(--ml-text);
-  --ml-muted: var(--ml-text);
+  /* Новые имена дизайн-системы наследуют старые. */
+  --ml-surface: var(--ml-bg, #12100E);
+  --ml-accent-2: var(--ml-accent2, #46C6A8);
+  --ml-on-accent: var(--ml-surface);
+
+  /* Не меняется никогда. */
+  --ml-text-2: #E5DED2;
+  --ml-line: rgba(255, 255, 255, .12);
+  --ml-error: #F5665A;
+  --ml-waiter-bg: #0B0A09;
+  --ml-scrim: .82;
+  --ml-blur: 20px;
+
+  /* Шрифт. */
+  --ml-font: 'Golos Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --ml-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Радиусы. */
+  --ml-r-chip: 999px;
+  --ml-r-btn: 16px;
+  --ml-r-card: 20px;
+  --ml-r-sheet: 28px;
+  --ml-r-icon: 12px;
+
+  /* Безопасные зоны. На iPhone env даёт 59 сверху и 34 снизу,
+     на обычном экране ноль. */
+  --ml-safe-top: env(safe-area-inset-top, 0px);
+  --ml-safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Анимации: 160 мс вход, 220 мс лист. */
+  --ml-in: 160ms;
+  --ml-sheet: 220ms;
+  --ml-ease: cubic-bezier(.22, .61, .36, 1);
+
+  /* Подложка плашки. Без color-mix плашка просто непрозрачная. */
+  --ml-panel: var(--ml-surface);
+  --ml-veil: var(--ml-surface);
+  --ml-fill: rgba(255, 255, 255, .08);
 }
 
 @supports (background: color-mix(in srgb, red 50%, transparent)) {
-  .ml-root {
-    --ml-panel: color-mix(in srgb, var(--ml-bg) 76%, transparent);
-    --ml-panel-strong: color-mix(in srgb, var(--ml-bg) 92%, transparent);
-    --ml-veil: color-mix(in srgb, var(--ml-bg) 62%, transparent);
-    --ml-soft: color-mix(in srgb, var(--ml-text) 10%, transparent);
-    --ml-line: color-mix(in srgb, var(--ml-text) 16%, transparent);
-    --ml-muted: color-mix(in srgb, var(--ml-text) 62%, transparent);
+  :root {
+    --ml-panel: color-mix(in srgb, var(--ml-surface) calc(var(--ml-scrim) * 100%), transparent);
+    --ml-veil: color-mix(in srgb, var(--ml-surface) 68%, transparent);
   }
 }
 
-/* ---------- 2. Корень и общие правила ---------- */
+/* ---------- 2. Корень, сброс, утилиты ---------- */
 
 .ml-root {
   position: fixed;
@@ -41,14 +69,16 @@
   display: flex;
   flex-direction: column;
   color: var(--ml-text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--ml-font);
   font-size: 15px;
-  line-height: 1.35;
+  font-weight: 500;
+  line-height: 1.45;
   /* сцена под интерфейсом должна получать жесты */
   pointer-events: none;
   -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none;
   user-select: none;
+  -webkit-font-smoothing: antialiased;
 }
 
 .ml-root *,
@@ -83,10 +113,29 @@
   display: none !important;
 }
 
+/* Иконка 24 в потоке текста. */
+.ml-i {
+  flex: 0 0 auto;
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+}
+
+.ml-i svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ml-i--sm {
+  width: 16px;
+  height: 16px;
+}
+
 /* Горизонтальные ленты без полосы прокрутки. */
 .ml-scroller {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -97,45 +146,46 @@
   display: none;
 }
 
+/* Плашка: затемнение со стеклом и волосяной линией. */
 .ml-panel {
   background: var(--ml-panel);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(var(--ml-blur));
+  backdrop-filter: blur(var(--ml-blur));
 }
 
-/* ---------- 3. Кнопки, чипы, степперы ---------- */
+/* ---------- 3. Кнопки, ссылки, чипы, степпер ---------- */
 
 .ml-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 48px;
-  padding: 0 20px;
-  border-radius: 14px;
-  font-size: 16px;
+  min-height: 52px;
+  padding: 12px 20px;
+  border-radius: var(--ml-r-btn);
+  font-size: 17px;
   font-weight: 600;
+  line-height: 1.15;
   text-align: center;
-  transition: transform 200ms ease-out, opacity 200ms ease-out;
+  transition: transform var(--ml-in) var(--ml-ease), background var(--ml-in) var(--ml-ease);
 }
 
 .ml-btn:active {
-  transform: scale(0.98);
+  transform: scale(.985);
 }
 
 .ml-btn--primary {
   background: var(--ml-accent);
-  color: var(--ml-bg);
+  color: var(--ml-on-accent);
 }
 
 .ml-btn--ghost {
-  background: var(--ml-soft);
+  background: var(--ml-fill);
   border: 1px solid var(--ml-line);
   color: var(--ml-text);
 }
 
 .ml-btn[disabled] {
-  opacity: 0.7;
   pointer-events: none;
 }
 
@@ -145,57 +195,97 @@
   justify-content: center;
   min-height: 44px;
   padding: 0 12px;
-  color: var(--ml-muted);
+  color: var(--ml-text);
   font-size: 15px;
+  font-weight: 600;
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
 }
 
+/* Круглая кнопка в шапке: цель 48. */
 .ml-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--ml-line);
+  background: var(--ml-panel);
+  -webkit-backdrop-filter: blur(var(--ml-blur));
+  backdrop-filter: blur(var(--ml-blur));
+  color: var(--ml-text);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  line-height: 1;
+  transition: background var(--ml-in) var(--ml-ease);
+}
+
+.ml-icon:active {
+  background: var(--ml-fill);
+}
+
+/* Счётчик: подложка и кнопки 44. */
+.ml-stepper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 2px;
+  border-radius: var(--ml-r-btn);
+  border: 1px solid var(--ml-line);
+  background: var(--ml-fill);
+}
+
+.ml-stepper__btn {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 44px;
   height: 44px;
-  border-radius: 50%;
-  background: var(--ml-panel);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1;
+  border-radius: 12px;
+  color: var(--ml-accent-2);
 }
 
-.ml-stepper {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 14px;
-  background: var(--ml-soft);
-  border: 1px solid var(--ml-line);
-}
-
-.ml-stepper__btn {
-  width: 44px;
-  height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--ml-accent2);
+.ml-stepper__btn:active {
+  background: var(--ml-fill);
 }
 
 .ml-stepper__qty {
-  min-width: 26px;
+  min-width: 32px;
   text-align: center;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
+  color: var(--ml-text);
+}
+
+/* Компактный счётчик в строке листа заказа: кнопки 36,
+   цель касания добирается невидимым расширением до 44. */
+.ml-stepper--sm {
+  padding: 0;
+  border-radius: 12px;
 }
 
 .ml-stepper--sm .ml-stepper__btn {
-  width: 44px;
-  height: 40px;
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+}
+
+.ml-stepper--sm .ml-stepper__btn::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
+.ml-stepper--sm .ml-stepper__qty {
+  min-width: 24px;
+  font-size: 15px;
 }
 
 /* ---------- 4. Приветствие ---------- */
@@ -208,36 +298,40 @@
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  padding: calc(env(safe-area-inset-top) + 14px) 20px calc(env(safe-area-inset-bottom) + 18px);
-  background: var(--ml-bg);
+  gap: 16px;
+  padding: calc(var(--ml-safe-top) + 16px) 16px calc(var(--ml-safe-bottom) + 24px);
+  background: var(--ml-surface);
   pointer-events: auto;
   overflow-y: auto;
 }
 
-.ml-welcome__langs {
+/* Пилюля переключения языка. */
+.ml-langs {
   align-self: flex-end;
   display: flex;
   gap: 4px;
-  padding: 3px;
-  border-radius: 12px;
-  background: var(--ml-soft);
+  padding: 4px;
+  border-radius: var(--ml-r-chip);
+  border: 1px solid var(--ml-line);
+  background: var(--ml-fill);
 }
 
 .ml-lang {
-  min-width: 46px;
-  min-height: 40px;
-  padding: 0 10px;
-  border-radius: 10px;
-  color: var(--ml-muted);
+  min-width: 48px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: var(--ml-r-chip);
+  color: var(--ml-text-2);
   font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  transition: background 200ms ease-out, color 200ms ease-out;
+  font-weight: 600;
+  letter-spacing: .04em;
+  transition: background var(--ml-in) var(--ml-ease), color var(--ml-in) var(--ml-ease);
 }
 
 .ml-lang.is-active {
-  background: var(--ml-accent);
-  color: var(--ml-bg);
+  background: var(--ml-text);
+  color: var(--ml-surface);
+  font-weight: 700;
 }
 
 .ml-welcome__body {
@@ -252,47 +346,51 @@
 }
 
 .ml-welcome__logo {
-  width: 118px;
-  height: 118px;
+  width: 96px;
+  height: 96px;
   object-fit: contain;
-  margin-bottom: 6px;
-  animation: ml-pulse 2600ms ease-in-out infinite;
+  margin-bottom: 12px;
 }
 
 .ml-welcome__title {
   margin: 0;
-  font-size: 25px;
-  line-height: 1.2;
-  font-weight: 700;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -.01em;
 }
 
 .ml-welcome__why {
   margin: 0;
-  color: var(--ml-muted);
-  font-size: 14px;
+  max-width: 340px;
+  color: var(--ml-text-2);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.45;
 }
 
 .ml-welcome__start {
   width: 100%;
-  margin-top: 10px;
+  margin-top: 12px;
   position: relative;
 }
 
 .ml-welcome__powered {
-  color: var(--ml-muted);
+  color: var(--ml-text-2);
   font-size: 11px;
-  letter-spacing: 0.06em;
+  font-weight: 600;
+  letter-spacing: .08em;
   text-transform: uppercase;
-  opacity: 0.75;
 }
 
 /* Кольцо прогресса внутри кнопки старта. */
 .ml-ring {
   display: none;
-  width: 18px;
-  height: 18px;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  border: 2px solid var(--ml-bg);
+  border: 2px solid var(--ml-on-accent);
   border-top-color: transparent;
   animation: ml-spin 800ms linear infinite;
 }
@@ -301,7 +399,11 @@
   display: block;
 }
 
-/* ---------- 5. Подсказка сканирования ---------- */
+.ml-state-starting .ml-welcome__start {
+  background: var(--ml-accent);
+}
+
+/* ---------- 5. Сканирование и кнопка «Смотреть» ---------- */
 
 .ml-mid {
   position: relative;
@@ -316,7 +418,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 16px;
   padding: 16px;
   text-align: center;
   pointer-events: none;
@@ -324,15 +426,15 @@
 
 .ml-scan__frame {
   position: relative;
-  width: min(62vw, 230px);
+  width: min(64vw, 240px);
   aspect-ratio: 1 / 1;
-  animation: ml-frame 2200ms ease-in-out infinite;
+  animation: ml-frame 2200ms var(--ml-ease) infinite;
 }
 
 .ml-scan__corner {
   position: absolute;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border: 3px solid var(--ml-accent);
 }
 
@@ -341,7 +443,7 @@
   left: 0;
   border-right: 0;
   border-bottom: 0;
-  border-radius: 6px 0 0 0;
+  border-radius: 8px 0 0 0;
 }
 
 .ml-scan__corner--tr {
@@ -349,7 +451,7 @@
   right: 0;
   border-left: 0;
   border-bottom: 0;
-  border-radius: 0 6px 0 0;
+  border-radius: 0 8px 0 0;
 }
 
 .ml-scan__corner--bl {
@@ -357,7 +459,7 @@
   left: 0;
   border-right: 0;
   border-top: 0;
-  border-radius: 0 0 0 6px;
+  border-radius: 0 0 0 8px;
 }
 
 .ml-scan__corner--br {
@@ -365,32 +467,43 @@
   right: 0;
   border-left: 0;
   border-top: 0;
-  border-radius: 0 0 6px 0;
+  border-radius: 0 0 8px 0;
 }
 
 .ml-scan__preview {
-  width: 92px;
-  border-radius: 10px;
+  width: 96px;
+  border-radius: var(--ml-r-icon);
   border: 1px solid var(--ml-line);
   object-fit: cover;
 }
 
 .ml-scan__text {
-  padding: 8px 14px;
-  border-radius: 12px;
+  padding: 12px 16px;
+  border-radius: var(--ml-r-chip);
+  border: 1px solid var(--ml-line);
   background: var(--ml-panel);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  font-size: 15px;
+  -webkit-backdrop-filter: blur(var(--ml-blur));
+  backdrop-filter: blur(var(--ml-blur));
+  color: var(--ml-text);
+  font-size: 17px;
   font-weight: 600;
+  line-height: 1.15;
 }
 
+/* Второй совет тоже на подложке: без неё текст теряется на живом кадре. */
 .ml-scan__tip {
-  max-width: 260px;
-  color: var(--ml-muted);
+  max-width: 300px;
+  padding: 8px 14px;
+  border-radius: var(--ml-r-chip);
+  border: 1px solid var(--ml-line);
+  background: var(--ml-panel);
+  -webkit-backdrop-filter: blur(var(--ml-blur));
+  backdrop-filter: blur(var(--ml-blur));
+  color: var(--ml-text-2);
   font-size: 13px;
+  font-weight: 500;
   opacity: 0;
-  transition: opacity 300ms ease-out;
+  transition: opacity var(--ml-in) var(--ml-ease);
 }
 
 .ml-scan__tip.is-visible {
@@ -409,7 +522,7 @@
 
 .ml-watch__btn {
   pointer-events: auto;
-  box-shadow: 0 8px 24px var(--ml-veil);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .45);
 }
 
 /* ---------- 6. Шапка ---------- */
@@ -418,69 +531,89 @@
   flex: 0 0 auto;
   display: none;
   flex-direction: column;
-  gap: 6px;
-  padding: calc(env(safe-area-inset-top) + 8px) 10px 4px;
+  gap: 8px;
+  padding: calc(var(--ml-safe-top) + 12px) 0 12px;
+  border-bottom: 1px solid var(--ml-line);
+  background: var(--ml-panel);
+  -webkit-backdrop-filter: blur(var(--ml-blur));
+  backdrop-filter: blur(var(--ml-blur));
   pointer-events: auto;
 }
 
 .ml-header__row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  padding: 0 16px;
 }
 
 .ml-cats {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 2px 0;
+  gap: 16px;
 }
 
+/* Вкладка категории: подчёркивание акцентом, без заливки. */
 .ml-cat {
+  position: relative;
   flex: 0 0 auto;
   min-height: 44px;
-  padding: 0 15px;
-  border-radius: 14px;
-  background: var(--ml-panel);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  font-size: 14px;
+  padding: 0 2px;
+  color: var(--ml-text-2);
+  font-size: 17px;
   font-weight: 600;
+  line-height: 1.15;
   white-space: nowrap;
-  transition: background 200ms ease-out, color 200ms ease-out;
+  transition: color var(--ml-in) var(--ml-ease);
+}
+
+.ml-cat::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 4px;
+  height: 2px;
+  border-radius: 999px;
+  background: transparent;
+  transition: background var(--ml-in) var(--ml-ease);
 }
 
 .ml-cat.is-active {
+  color: var(--ml-text);
+}
+
+.ml-cat.is-active::after {
   background: var(--ml-accent);
-  color: var(--ml-bg);
 }
 
 .ml-header__actions {
   flex: 0 0 auto;
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 
 .ml-filters {
-  padding: 0 0 2px;
+  padding: 0 16px;
 }
 
+/* Чип-фильтр. */
 .ml-chip {
   position: relative;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   min-height: 36px;
-  padding: 0 12px;
-  border-radius: 12px;
-  background: var(--ml-panel);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  color: var(--ml-muted);
+  padding: 0 14px;
+  border-radius: var(--ml-r-chip);
+  border: 1px solid var(--ml-line);
+  background: var(--ml-fill);
+  color: var(--ml-text-2);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
-  transition: background 200ms ease-out, color 200ms ease-out;
+  transition: background var(--ml-in) var(--ml-ease), color var(--ml-in) var(--ml-ease);
 }
 
 /* Невидимое расширение цели касания до 44 px по высоте. */
@@ -490,9 +623,15 @@
   inset: -4px 0;
 }
 
+.ml-chip .ml-i {
+  margin-left: -2px;
+}
+
 .ml-chip.is-active {
   background: var(--ml-accent);
-  color: var(--ml-bg);
+  border-color: var(--ml-accent);
+  color: var(--ml-on-accent);
+  font-weight: 600;
 }
 
 /* ---------- 7. Режим без камеры ---------- */
@@ -504,30 +643,32 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 12px;
+  padding: 12px 16px;
   pointer-events: auto;
 }
 
 .ml-nocam__title {
-  padding: 5px 12px;
-  border-radius: 10px;
+  padding: 6px 14px;
+  border-radius: var(--ml-r-chip);
+  border: 1px solid var(--ml-line);
   background: var(--ml-panel);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  color: var(--ml-muted);
-  font-size: 12px;
+  -webkit-backdrop-filter: blur(var(--ml-blur));
+  backdrop-filter: blur(var(--ml-blur));
+  color: var(--ml-text);
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: .08em;
   text-transform: uppercase;
 }
 
 .ml-nocam__slot {
   width: 100%;
   max-width: 520px;
-  border-radius: 18px;
+  border-radius: var(--ml-r-card);
+  border: 1px solid var(--ml-line);
   overflow: hidden;
-  background: var(--ml-soft);
+  background: var(--ml-surface);
 }
 
 .ml-nocam__slot video,
@@ -536,171 +677,216 @@
   width: 100%;
   max-height: 52vh;
   object-fit: contain;
-  background: var(--ml-bg);
+  background: var(--ml-surface);
 }
 
-/* ---------- 8. Низ: плашка, лента, карточка ---------- */
+/* ---------- 8. Низ: плашка заказа, лента, карточка ---------- */
 
 .ml-bottom {
   flex: 0 0 auto;
   display: none;
   flex-direction: column;
-  gap: 8px;
-  padding: 6px 0 calc(env(safe-area-inset-bottom) + 10px);
+  gap: 12px;
+  padding: 8px 0 calc(var(--ml-safe-bottom) + 16px);
 }
 
+/* Плашка заказа с отдельной кнопкой «Открыть». */
 .ml-order {
-  align-self: center;
   display: none;
-  min-height: 44px;
-  padding: 0 18px;
-  border-radius: 999px;
-  background: var(--ml-accent);
-  color: var(--ml-bg);
-  font-size: 14px;
-  font-weight: 700;
-  box-shadow: 0 6px 18px var(--ml-veil);
+  align-items: center;
+  gap: 12px;
+  margin: 0 16px;
+  padding: 4px 4px 4px 16px;
+  border-radius: var(--ml-r-chip);
+  border: 1px solid var(--ml-line);
+  background: var(--ml-panel);
+  -webkit-backdrop-filter: blur(var(--ml-blur));
+  backdrop-filter: blur(var(--ml-blur));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 .ml-root.ml-has-order .ml-order {
+  display: flex;
+  animation: ml-rise var(--ml-in) var(--ml-ease);
+}
+
+.ml-order__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--ml-text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ml-order__open {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  animation: ml-rise 250ms ease-out;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--ml-r-chip);
+  background: var(--ml-accent);
+  color: var(--ml-on-accent);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .ml-strip {
-  padding: 0 10px 2px;
+  padding: 0 16px;
 }
 
+/* Чип блюда: название и цена в одну строку. */
 .ml-dish {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   min-height: 44px;
-  padding: 0 14px;
-  border-radius: 14px;
-  border: 1px solid transparent;
+  padding: 0 16px;
+  border-radius: var(--ml-r-chip);
+  border: 1px solid var(--ml-line);
   background: var(--ml-panel);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  font-size: 14px;
+  -webkit-backdrop-filter: blur(var(--ml-blur));
+  backdrop-filter: blur(var(--ml-blur));
+  font-size: 15px;
+  font-weight: 500;
   white-space: nowrap;
-  transition: border-color 200ms ease-out, background 200ms ease-out;
+  transition: background var(--ml-in) var(--ml-ease), color var(--ml-in) var(--ml-ease);
 }
 
 .ml-dish__name {
   font-weight: 600;
+  color: var(--ml-text);
 }
 
 .ml-dish__sep,
 .ml-dish__price {
-  color: var(--ml-muted);
+  color: var(--ml-text-2);
 }
 
 .ml-dish.is-active {
+  background: var(--ml-accent);
   border-color: var(--ml-accent);
 }
 
+.ml-dish.is-active .ml-dish__name,
+.ml-dish.is-active .ml-dish__sep,
 .ml-dish.is-active .ml-dish__price {
-  color: var(--ml-accent2);
+  color: var(--ml-on-accent);
 }
 
+/* Карточка блюда. */
 .ml-card {
-  margin: 0 10px;
-  padding: 12px 14px;
-  border-radius: 18px;
+  margin: 0 16px;
+  padding: 12px;
+  border-radius: var(--ml-r-card);
+  border: 1px solid var(--ml-line);
   background: var(--ml-panel);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(var(--ml-blur));
+  backdrop-filter: blur(var(--ml-blur));
   display: flex;
   flex-direction: column;
   gap: 8px;
   pointer-events: auto;
-  animation: ml-rise 250ms ease-out;
+  animation: ml-rise var(--ml-in) var(--ml-ease);
 }
 
 .ml-root.ml-no-card .ml-card {
   display: none;
 }
 
+/* Промо-бейдж вторым акцентом. */
 .ml-card__promo {
   align-self: flex-start;
-  padding: 3px 9px;
-  border-radius: 8px;
-  border: 1px solid var(--ml-accent);
-  color: var(--ml-accent);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  max-width: 100%;
+  padding: 4px 12px;
+  border-radius: var(--ml-r-chip);
+  background: var(--ml-accent-2);
+  color: var(--ml-on-accent);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
 }
 
+/* Название и цена в одну строку, у цены своя колонка. */
 .ml-card__top {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.ml-card__head {
-  flex: 1 1 auto;
-  min-width: 0;
+  align-items: baseline;
+  gap: 12px;
 }
 
 .ml-card__title {
-  font-size: 18px;
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--ml-text);
+  font-size: 20px;
   font-weight: 700;
-  line-height: 1.2;
-}
-
-.ml-card__meta {
-  margin-top: 4px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  color: var(--ml-muted);
-  font-size: 12px;
+  line-height: 1.15;
 }
 
 .ml-card__price {
   flex: 0 0 auto;
-  color: var(--ml-accent2);
-  font-size: 18px;
+  color: var(--ml-text);
+  font-size: 20px;
   font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.ml-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  color: var(--ml-text-2);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ml-card__facts {
   white-space: nowrap;
 }
 
 .ml-tags {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 4px;
+  align-items: center;
+  gap: 4px 12px;
 }
 
+/* Значок тега: иконка плюс подпись, без плашки. */
 .ml-tag {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 7px;
-  border-radius: 8px;
-  background: var(--ml-soft);
+  gap: 4px;
   color: var(--ml-text);
-  font-size: 11px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
-.ml-tag__icon {
-  font-size: 12px;
-  line-height: 1;
+.ml-tag .ml-i {
+  color: var(--ml-accent);
 }
 
 .ml-card__desc {
   width: 100%;
   /* цель касания не меньше 44 px, высота карточки не скачет от блюда к блюду */
   min-height: 44px;
-  padding: 3px 0;
+  padding: 0;
   text-align: left;
-  color: var(--ml-muted);
-  font-size: 13px;
-  line-height: 1.4;
+  color: var(--ml-text-2);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.45;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -714,8 +900,9 @@
 
 .ml-card__allergens {
   display: none;
-  color: var(--ml-muted);
-  font-size: 12px;
+  color: var(--ml-text-2);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .ml-card.is-expanded .ml-card__allergens:not(:empty) {
@@ -724,19 +911,16 @@
 
 .ml-card__foot {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
 }
 
 /* Пары держим одной строкой: карточка не должна расти вверх над сценой. */
 .ml-card__pairs {
-  flex: 1 1 auto;
-  min-width: 0;
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -752,19 +936,26 @@
 }
 
 .ml-card__pairs-label {
-  color: var(--ml-muted);
-  font-size: 12px;
+  color: var(--ml-text-2);
+  font-size: 13px;
+  font-weight: 500;
 }
 
+/* Кнопка блюда-пары: пилюля. */
 .ml-pair {
   position: relative;
+  display: inline-flex;
+  align-items: center;
   min-height: 36px;
-  padding: 0 10px;
-  border-radius: 10px;
+  padding: 0 14px;
+  border-radius: var(--ml-r-chip);
   border: 1px solid var(--ml-line);
-  font-size: 12px;
-  font-weight: 600;
+  background: var(--ml-fill);
+  color: var(--ml-text);
+  font-size: 13px;
+  font-weight: 500;
   white-space: nowrap;
+  transition: background var(--ml-in) var(--ml-ease);
 }
 
 /* Невидимое расширение цели касания до 44 px. */
@@ -774,18 +965,27 @@
   inset: -4px 0;
 }
 
+.ml-pair:active {
+  background: var(--ml-line);
+}
+
 .ml-card__actions {
-  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.ml-btn--add,
+.ml-card__actions .ml-stepper {
+  width: 100%;
 }
 
 .ml-btn--add {
-  min-height: 44px;
-  padding: 0 18px;
-  border-radius: 14px;
+  min-height: 52px;
+  border-radius: var(--ml-r-btn);
   background: var(--ml-accent);
-  color: var(--ml-bg);
-  font-size: 15px;
-  font-weight: 700;
+  color: var(--ml-on-accent);
+  font-size: 17px;
+  font-weight: 600;
 }
 
 /* ---------- 9. Лист заказа ---------- */
@@ -806,9 +1006,9 @@
   position: absolute;
   inset: 0;
   background: var(--ml-veil);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-  animation: ml-fade 250ms ease-out;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  animation: ml-fade var(--ml-sheet) var(--ml-ease);
 }
 
 .ml-sheet__panel {
@@ -816,30 +1016,47 @@
   left: 0;
   right: 0;
   bottom: 0;
-  max-height: 82vh;
+  max-height: 84vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px 16px calc(env(safe-area-inset-bottom) + 16px);
-  border-radius: 20px 20px 0 0;
-  background: var(--ml-panel-strong);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  animation: ml-sheet-up 300ms ease-out;
+  gap: 16px;
+  padding: 8px 16px calc(var(--ml-safe-bottom) + 24px);
+  border-radius: var(--ml-r-sheet) var(--ml-r-sheet) 0 0;
+  border-top: 1px solid var(--ml-line);
+  background: var(--ml-panel);
+  -webkit-backdrop-filter: blur(var(--ml-blur));
+  backdrop-filter: blur(var(--ml-blur));
+  animation: ml-sheet-up var(--ml-sheet) var(--ml-ease);
+}
+
+/* Ручка-полоска. */
+.ml-sheet__grip {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 44px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--ml-line);
 }
 
 .ml-sheet__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
 .ml-sheet__title {
   margin: 0;
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 700;
+  line-height: 1.15;
+}
+
+.ml-sheet__close {
+  width: 44px;
+  height: 44px;
 }
 
 .ml-sheet__list {
@@ -850,7 +1067,7 @@
 .ml-line {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 8px 0;
   border-bottom: 1px solid var(--ml-line);
 }
@@ -858,37 +1075,47 @@
 .ml-line__name {
   flex: 1 1 auto;
   min-width: 0;
+  color: var(--ml-text);
   font-size: 15px;
   font-weight: 600;
+  line-height: 1.45;
 }
 
 .ml-line__sum {
   flex: 0 0 auto;
-  min-width: 84px;
+  min-width: 88px;
   text-align: right;
-  color: var(--ml-accent2);
-  font-size: 14px;
-  font-weight: 700;
+  color: var(--ml-text);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .ml-sheet__empty {
-  padding: 18px 0;
+  padding: 24px 0;
   text-align: center;
-  color: var(--ml-muted);
-  font-size: 14px;
+  color: var(--ml-text-2);
+  font-size: 15px;
+  font-weight: 500;
 }
 
 .ml-sheet__total {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  padding-top: 4px;
-  font-size: 16px;
+  gap: 12px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.ml-sheet__total-label {
+  color: var(--ml-text-2);
 }
 
 .ml-sheet__total-value {
-  color: var(--ml-accent2);
-  font-size: 18px;
+  color: var(--ml-text);
+  font-size: 24px;
+  font-weight: 700;
 }
 
 .ml-sheet__actions {
@@ -906,9 +1133,9 @@
   display: none;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 20px);
-  background: var(--ml-bg);
+  gap: 24px;
+  padding: calc(var(--ml-safe-top) + 24px) 16px calc(var(--ml-safe-bottom) + 24px);
+  background: var(--ml-waiter-bg);
   overflow-y: auto;
   pointer-events: auto;
 }
@@ -918,8 +1145,9 @@
 }
 
 .ml-waiter__logo {
-  width: 84px;
-  height: 84px;
+  flex: 0 0 auto;
+  height: 40px;
+  max-width: 180px;
   object-fit: contain;
 }
 
@@ -928,42 +1156,48 @@
   max-width: 480px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
 .ml-waiter__line {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
+  gap: 16px;
+  padding: 12px 0;
   border-bottom: 1px solid var(--ml-line);
 }
 
 .ml-waiter__name {
+  color: var(--ml-text);
   font-size: 24px;
   font-weight: 700;
   line-height: 1.15;
 }
 
 .ml-waiter__qty {
+  flex: 0 0 auto;
   color: var(--ml-accent);
-  font-size: 26px;
-  font-weight: 800;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.15;
   white-space: nowrap;
 }
 
 .ml-waiter__empty {
-  padding: 20px 0;
-  color: var(--ml-muted);
-  font-size: 16px;
+  padding: 24px 0;
+  color: var(--ml-text-2);
+  font-size: 17px;
+  font-weight: 600;
   text-align: center;
 }
 
 .ml-waiter__total {
-  font-size: 20px;
+  width: 100%;
+  max-width: 480px;
+  color: var(--ml-text);
+  font-size: 24px;
   font-weight: 700;
-  color: var(--ml-accent2);
+  line-height: 1.15;
 }
 
 .ml-waiter__done {
@@ -981,8 +1215,8 @@
   display: none;
   align-items: center;
   justify-content: center;
-  padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 20px);
-  background: var(--ml-bg);
+  padding: calc(var(--ml-safe-top) + 24px) 16px calc(var(--ml-safe-bottom) + 24px);
+  background: var(--ml-surface);
   overflow-y: auto;
   pointer-events: auto;
 }
@@ -993,35 +1227,56 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   text-align: center;
+}
+
+/* Иконка в квадрате радиус 12. */
+.ml-error__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--ml-r-icon);
+  border: 1px solid var(--ml-line);
+  color: var(--ml-text);
+}
+
+.ml-error__icon.is-error {
+  border-color: var(--ml-error);
+  color: var(--ml-error);
 }
 
 .ml-error__title {
   margin: 0;
-  font-size: 21px;
+  font-size: 24px;
   font-weight: 700;
+  line-height: 1.15;
 }
 
 .ml-error__body {
   margin: 0;
-  color: var(--ml-muted);
+  color: var(--ml-text-2);
   font-size: 15px;
+  font-weight: 500;
+  line-height: 1.45;
 }
 
 .ml-error__qr {
   width: 200px;
-  border-radius: 14px;
+  border-radius: var(--ml-r-card);
 }
 
 .ml-error__detail {
   width: 100%;
   margin: 0;
-  padding: 10px;
-  border-radius: 10px;
-  background: var(--ml-soft);
-  color: var(--ml-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  padding: 12px;
+  border-radius: var(--ml-r-icon);
+  border: 1px solid var(--ml-line);
+  background: var(--ml-fill);
+  color: var(--ml-text-2);
+  font-family: var(--ml-mono);
   font-size: 11px;
   text-align: left;
   white-space: pre-wrap;
@@ -1033,30 +1288,39 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 6px;
-  margin-top: 4px;
+  gap: 8px;
+  margin-top: 8px;
 }
 
-/* ---------- 12. Тост ---------- */
+/* ---------- 12. Тосты ---------- */
 
+/* Тост лежит в свободном центре, у нижней его границы: так он не перекрывает
+   карточку блюда и остаётся внизу экрана. */
 .ml-toast {
   position: absolute;
   left: 50%;
-  bottom: calc(env(safe-area-inset-bottom) + 22px);
+  bottom: calc(var(--ml-safe-bottom) + 8px);
   z-index: 70;
   transform: translate(-50%, 8px);
-  max-width: 86vw;
-  padding: 10px 16px;
-  border-radius: 12px;
-  background: var(--ml-panel-strong);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  font-size: 14px;
+  max-width: calc(100% - 32px);
+  padding: 12px 20px;
+  border-radius: var(--ml-r-chip);
+  background: var(--ml-text);
+  color: var(--ml-surface);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.15;
   text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
   opacity: 0;
   visibility: hidden;
-  transition: opacity 200ms ease-out, transform 200ms ease-out, visibility 200ms;
+  transition: opacity var(--ml-in) var(--ml-ease), transform var(--ml-in) var(--ml-ease), visibility var(--ml-in);
   pointer-events: none;
+}
+
+.ml-toast.is-error {
+  background: var(--ml-error);
+  color: var(--ml-on-accent);
 }
 
 .ml-toast.is-visible {
@@ -1096,11 +1360,12 @@
   display: flex;
 }
 
-/* Захват потерян: интерфейс приглушён, но кликабелен. */
+/* Захват потерян: интерфейс приглушён, но кликабелен.
+   Гасим подложку, а не текст: полупрозрачных букв в макете нет. */
 .ml-root.ml-state-lost .ml-header,
 .ml-root.ml-state-lost .ml-bottom {
-  opacity: 0.72;
-  transition: opacity 250ms ease-out;
+  opacity: .88;
+  transition: opacity var(--ml-in) var(--ml-ease);
 }
 
 .ml-root.ml-watch-on.ml-state-found .ml-watch,
@@ -1110,22 +1375,17 @@
 
 /* ---------- 14. Анимации ---------- */
 
-@keyframes ml-pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.05); opacity: 0.88; }
-}
-
 @keyframes ml-spin {
   to { transform: rotate(360deg); }
 }
 
 @keyframes ml-frame {
   0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.04); opacity: 0.7; }
+  50% { transform: scale(1.04); opacity: .7; }
 }
 
 @keyframes ml-rise {
-  from { transform: translateY(10px); opacity: 0; }
+  from { transform: translateY(8px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
@@ -1157,14 +1417,14 @@
   display: none !important;
 }
 
-/* ---------- Контейнер AR-сцены и служебные экраны (main.js) ---------- */
+/* ---------- 16. Контейнер AR-сцены и служебные экраны (main.js) ---------- */
 
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
   overflow: hidden;
-  background: var(--ml-bg);
+  background: var(--ml-surface);
 }
 
 #ml-scene {
@@ -1200,23 +1460,24 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 16px;
   padding: 24px;
-  background: var(--ml-bg);
+  background: var(--ml-surface);
   color: var(--ml-text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--ml-font);
   text-align: center;
 }
 
 .ml-fatal__title {
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 700;
+  line-height: 1.15;
 }
 
 .ml-fatal__detail {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
-  opacity: 0.6;
   max-width: 90%;
+  color: var(--ml-text-2);
+  font-family: var(--ml-mono);
+  font-size: 11px;
   word-break: break-word;
 }
