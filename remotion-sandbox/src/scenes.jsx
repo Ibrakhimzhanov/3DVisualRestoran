@@ -46,38 +46,38 @@ const CameraView = ({ zoom = 1 }) => {
           left: '-14%',
           top: '-6%',
           transform: `scale(${zoom}) rotate(${drift}deg)`,
-          filter: 'brightness(.5) saturate(.85)',
+          filter: 'brightness(.34) saturate(.7) blur(1.2px)',
         }}
       />
-      <AbsoluteFill style={{ background: 'linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.10) 40%, rgba(0,0,0,.55))' }} />
+      <AbsoluteFill style={{ background: 'linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.28) 42%, rgba(0,0,0,.72))' }} />
+      {/* тёплое пятно света под блюдом: даёт ощущение, что оно лежит на странице */}
+      <AbsoluteFill style={{ background: 'radial-gradient(46% 26% at 50% 46%, rgba(255,196,120,.20), transparent 70%)' }} />
     </AbsoluteFill>
   );
 };
 
 // Блюдо поверх бумаги. mixBlendMode screen убирает чёрный фон ролика,
 // это тот же приём, что luma-key в самом продукте.
-const FloatingDish = ({ startAt = 0, src = 'brest/plate.mp4' }) => {
+const FloatingDish = ({ startAt = 0, src = 'alpha/plate.webm' }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const s = spring({ frame: frame - startAt, fps, config: { damping: 22, mass: 0.7 }, durationInFrames: 26 });
-  const bob = Math.sin((frame - startAt) / 30) * 5;
+  const bob = Math.sin((frame - startAt) / 30) * 4;
   return (
     <div
       style={{
         position: 'absolute',
         left: '50%',
-        top: 262,
-        width: 296,
-        transform: `translate(-50%,0) scale(${interpolate(s, [0, 1], [0.86, 1])}) translateY(${bob}px)`,
+        top: 248,
+        width: 470,
+        transform: `translate(-50%,0) scale(${interpolate(s, [0, 1], [0.88, 1])}) translateY(${bob}px)`,
         opacity: s,
-        mixBlendMode: 'screen',
-        filter: 'drop-shadow(0 24px 40px rgba(0,0,0,.5))',
-        // растушёвка краёв: тот же приём, что параметр feather в шейдере продукта
-        WebkitMaskImage: 'radial-gradient(78% 72% at 50% 50%, #000 58%, transparent 100%)',
-        maskImage: 'radial-gradient(78% 72% at 50% 50%, #000 58%, transparent 100%)',
+        // настоящий альфа-канал, как luma-ключ в шейдере продукта:
+        // блюдо непрозрачное, сквозь него ничего не просвечивает
+        filter: 'drop-shadow(0 18px 26px rgba(0,0,0,.75)) saturate(1.12) contrast(1.06)',
       }}
     >
-      <OffthreadVideo src={staticFile(src)} muted loop style={{ width: '100%' }} />
+      <OffthreadVideo src={staticFile(src)} muted loop transparent style={{ width: '100%' }} />
     </div>
   );
 };

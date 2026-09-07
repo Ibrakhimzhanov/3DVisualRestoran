@@ -91,22 +91,21 @@ const VReveal = () => {
       <Bg blur={14} bright={0.25} />
       <Phone scale={1} y={190}>
         <AbsoluteFill style={{ overflow: 'hidden' }}>
-          <Img src={staticFile('brest/menu-preview.jpg')} style={{ position: 'absolute', width: '128%', left: '-14%', top: '-6%', filter: 'brightness(.5)' }} />
+          <Img src={staticFile('brest/menu-preview.jpg')} style={{ position: 'absolute', width: '128%', left: '-14%', top: '-6%', filter: 'brightness(.34) saturate(.7) blur(1.2px)' }} />
         </AbsoluteFill>
         <div
           style={{
             position: 'absolute',
             left: '50%',
-            top: 262,
-            width: 296,
-            transform: `translate(-50%,0) scale(${interpolate(s, [0, 1], [0.86, 1])}) translateY(${bob}px)`,
+            top: 248,
+            width: 470,
+            transform: `translate(-50%,0) scale(${interpolate(s, [0, 1], [0.88, 1])}) translateY(${bob}px)`,
             opacity: s,
-            mixBlendMode: 'screen',
-            WebkitMaskImage: 'radial-gradient(78% 72% at 50% 50%, #000 58%, transparent 100%)',
-            maskImage: 'radial-gradient(78% 72% at 50% 50%, #000 58%, transparent 100%)',
+            // настоящий альфа-канал вместо режима screen: блюдо непрозрачное
+            filter: 'drop-shadow(0 18px 26px rgba(0,0,0,.75)) saturate(1.12) contrast(1.06)',
           }}
         >
-          <OffthreadVideo src={staticFile('brest/plate.mp4')} muted loop style={{ width: '100%' }} />
+          <OffthreadVideo src={staticFile('alpha/plate.webm')} muted loop transparent style={{ width: '100%' }} />
         </div>
         <div style={{ opacity: interpolate(frame, [40, 60], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) }}>
           <Header cats={['Гриль', 'Море', 'Салаты']} active="Гриль" />
