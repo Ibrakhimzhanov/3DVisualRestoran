@@ -828,14 +828,14 @@ export class UI extends Emitter {
 
   // Пожелание кухне из поля ввода. Длину режем, чтобы не отправить на сервер простыню.
   orderComment() {
-    const input = this.nodes.sheetNoteInput;
+    const input = this._nodes.sheetNoteInput;
     if (!input) return '';
     return String(input.value || '').trim().slice(0, 200);
   }
 
   // После успешной отправки поле чистим вместе с корзиной.
   clearOrderComment() {
-    if (this.nodes.sheetNoteInput) this.nodes.sheetNoteInput.value = '';
+    if (this._nodes.sheetNoteInput) this._nodes.sheetNoteInput.value = '';
   }
 
   _rows(dishes, items) {

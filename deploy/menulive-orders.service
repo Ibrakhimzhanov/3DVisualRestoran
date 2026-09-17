@@ -12,6 +12,11 @@ Documentation=file:///var/www/ar-menu/docs/api-orders.md
 After=network-online.target
 Wants=network-online.target
 
+# Если сервис падает чаще пяти раз за минуту, systemd перестаёт его поднимать.
+# Эти ключи живут только в секции Unit, в Service systemd их игнорирует.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
 [Service]
 Type=simple
 User=www-data
@@ -27,9 +32,6 @@ ExecStart=/usr/bin/node /var/www/ar-menu/server/index.js
 
 Restart=always
 RestartSec=2
-# Если сервис падает чаще пяти раз за минуту, systemd перестаёт его поднимать.
-StartLimitIntervalSec=60
-StartLimitBurst=5
 
 StandardOutput=journal
 StandardError=journal
