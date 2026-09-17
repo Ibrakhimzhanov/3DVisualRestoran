@@ -1,0 +1,76 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'uz.shumtuber.menulive.waiter'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'uz.shumtuber.menulive.waiter'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    sourceSets {
+        // Веб-часть приложения лежит рядом, в waiter-app/www, и упаковывается в assets/www.
+        main {
+            assets.srcDirs += ['../../www']
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Ключ подписи берётся из waiter-app/android/keystore.properties, если файл есть.
+            // Без него собирается неподписанный release, ставить надо debug-сборку.
+            signingConfig signingConfigs.findByName('release')
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/*.kotlin_module']
+        }
+    }
+}
+
+configurations.configureEach {
+    // Начиная с Kotlin 1.8 модули stdlib-jdk7 и stdlib-jdk8 влиты в основной stdlib.
+    // Старые версии приезжают транзитивно и дают дубли классов при сборке dex.
+    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+}
+
+// Подпись релиза: файл keystore.properties в репозиторий не коммитится.
+def keystorePropsFile = rootProject.file('keystore.properties')
+if (keystorePropsFile.exists()) {
+    def props = new Properties()
+    keystorePropsFile.withInputStream { props.load(it) }
+    android.signingConfigs {
+        release {
+            storeFile rootProject.file(props['storeFile'])
+            storePassword props['storePassword']
+            keyAlias props['keyAlias']
+            keyPassword props['keyPassword']
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.core:core:1.13.1'
+}

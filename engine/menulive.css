@@ -1206,6 +1206,561 @@
   margin-top: auto;
 }
 
+/* ---------- 10a. Отправка заказа ---------- */
+
+.ml-sheet__titles {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Номер стола под заголовком листа заказа. */
+.ml-sheet__sub {
+  margin-top: 2px;
+  color: var(--ml-text-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ml-sheet__send {
+  position: relative;
+  width: 100%;
+}
+
+/* Кольцо прогресса видно, пока заказ уходит на сервер. */
+.ml-btn.is-busy .ml-ring {
+  display: block;
+}
+
+/* Мягкий экран «стола нет»: ничего не ломается, просто нельзя отправить. */
+/* Пожелание кухне в листе заказа. */
+.ml-note {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ml-note__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ml-text-2);
+}
+
+.ml-note__input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: var(--ml-r-btn);
+  border: 1px solid var(--ml-line);
+  background: var(--ml-fill);
+  color: var(--ml-text);
+  font-family: var(--ml-font);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.ml-note__input:focus {
+  outline: none;
+  border-color: var(--ml-accent);
+}
+
+.ml-notable {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: var(--ml-r-card);
+  border: 1px solid var(--ml-line);
+  background: var(--ml-fill);
+}
+
+.ml-notable__title {
+  color: var(--ml-text);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.ml-notable__body {
+  margin: 0;
+  color: var(--ml-text-2);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+/* Заказ не ушёл: текст и «Повторить» рядом. */
+.ml-fail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--ml-r-card);
+  border: 1px solid var(--ml-error);
+  background: var(--ml-fill);
+}
+
+.ml-fail__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--ml-text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ml-fail__retry {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--ml-line);
+  background: var(--ml-panel);
+  color: var(--ml-text);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ---------- 10b. Экран статуса заказа ---------- */
+
+.ml-status {
+  position: absolute;
+  inset: 0;
+  z-index: 55;
+  display: none;
+  flex-direction: column;
+  background: var(--ml-surface);
+  pointer-events: auto;
+}
+
+.ml-root.ml-status-open .ml-status {
+  display: flex;
+}
+
+.ml-status__head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: calc(var(--ml-safe-top) + 16px) 16px 14px;
+}
+
+.ml-status__back {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-left: -10px;
+  border-radius: 50%;
+  color: var(--ml-text-2);
+}
+
+.ml-status__back:active {
+  background: var(--ml-fill);
+}
+
+.ml-status__head-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ml-status__number {
+  color: var(--ml-text);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.ml-status__sub {
+  margin-top: 4px;
+  color: var(--ml-text-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ml-status__more {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--ml-line);
+  color: var(--ml-text-2);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ml-status__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 16px 8px;
+}
+
+/* Крупный статус и счётчик минут. */
+.ml-status__hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.ml-status__hero-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ml-status__badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ml-status__dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--ml-accent);
+}
+
+.ml-status__badge-label {
+  color: var(--ml-accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+/* Подан и оплачен это спокойный зелёный, отменён это красный. */
+.ml-status.is-served .ml-status__dot,
+.ml-status.is-paid .ml-status__dot {
+  background: var(--ml-accent-2);
+}
+
+.ml-status.is-served .ml-status__badge-label,
+.ml-status.is-paid .ml-status__badge-label {
+  color: var(--ml-accent-2);
+}
+
+.ml-status.is-cancelled .ml-status__dot {
+  background: var(--ml-error);
+}
+
+.ml-status.is-cancelled .ml-status__badge-label {
+  color: var(--ml-error);
+}
+
+.ml-status__title {
+  margin: 10px 0 0;
+  color: var(--ml-text);
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.ml-status__note {
+  margin-top: 8px;
+  color: var(--ml-text-2);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ml-status__clock {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.ml-status__clock-num {
+  color: var(--ml-accent);
+  font-size: 44px;
+  font-weight: 800;
+  line-height: .9;
+}
+
+.ml-status__clock-unit {
+  margin-top: 6px;
+  color: var(--ml-text-2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+/* Таймлайн из четырёх шагов. */
+.ml-status__timeline {
+  margin-top: 20px;
+  padding-top: 4px;
+  border-top: 1px solid var(--ml-line);
+}
+
+.ml-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.ml-step__rail {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 14px;
+  align-self: stretch;
+  padding-top: 15px;
+}
+
+.ml-step__dot {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  border: 2px solid var(--ml-line);
+  background: transparent;
+}
+
+.ml-step.is-done .ml-step__dot {
+  border-color: var(--ml-accent-2);
+  background: var(--ml-accent-2);
+}
+
+.ml-step.is-now .ml-step__dot {
+  border-color: var(--ml-accent);
+  background: var(--ml-accent);
+}
+
+.ml-step__line {
+  flex: 1 1 auto;
+  width: 1px;
+  min-height: 26px;
+  margin-top: 5px;
+  background: var(--ml-line);
+}
+
+.ml-step.is-done .ml-step__line {
+  background: var(--ml-accent-2);
+  opacity: .45;
+}
+
+.ml-step__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 11px 0 0;
+}
+
+.ml-step__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ml-step__label {
+  color: var(--ml-text-2);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.ml-step.is-done .ml-step__label,
+.ml-step.is-now .ml-step__label {
+  color: var(--ml-text);
+}
+
+.ml-step.is-now .ml-step__label {
+  font-size: 17px;
+}
+
+.ml-step__time {
+  flex: 0 0 auto;
+  color: var(--ml-text-2);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ml-step__hint {
+  margin-top: 4px;
+  color: var(--ml-text-2);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.ml-step.is-next .ml-step__hint {
+  opacity: .7;
+}
+
+/* Официант. */
+.ml-status__waiter {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ml-line);
+}
+
+.ml-status__avatar {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--ml-accent);
+  color: var(--ml-on-accent);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.ml-status__waiter-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ml-status__waiter-name {
+  color: var(--ml-text);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.ml-status__waiter-role {
+  margin-top: 4px;
+  color: var(--ml-text-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Состав заказа и сумма. */
+.ml-status__lines {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ml-line);
+}
+
+.ml-status__line {
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+  padding: 5px 0;
+}
+
+.ml-status__qty {
+  flex: 0 0 auto;
+  min-width: 18px;
+  color: var(--ml-text-2);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.ml-status__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--ml-text-2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ml-status__sum {
+  flex: 0 0 auto;
+  color: var(--ml-text-2);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ml-status__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ml-line);
+}
+
+.ml-status__total-label {
+  color: var(--ml-text-2);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.ml-status__total-value {
+  color: var(--ml-accent);
+  font-size: 22px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* Низ: вызов официанта и счёт. */
+.ml-status__foot {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px calc(var(--ml-safe-bottom) + 20px);
+  border-top: 1px solid var(--ml-line);
+}
+
+.ml-status__calls {
+  display: flex;
+  gap: 10px;
+}
+
+.ml-call {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 54px;
+  padding: 0 10px;
+  border-radius: var(--ml-r-btn);
+  border: 1px solid var(--ml-line);
+  background: transparent;
+  color: var(--ml-text-2);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  transition: background var(--ml-in) var(--ml-ease), color var(--ml-in) var(--ml-ease);
+}
+
+.ml-call:active {
+  background: var(--ml-fill);
+}
+
+/* Вызов ушёл: кнопка переходит в спокойное подтверждение. */
+.ml-call.is-live {
+  border-color: var(--ml-accent-2);
+  background: var(--ml-fill);
+  color: var(--ml-accent-2);
+}
+
+.ml-call[disabled] {
+  pointer-events: none;
+  opacity: .75;
+}
+
+.ml-status__foot-note {
+  margin: 0;
+  color: var(--ml-text-2);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: center;
+}
+
 /* ---------- 11. Ошибки ---------- */
 
 .ml-error {

@@ -92,6 +92,119 @@ const DICT = {
   'order.title': { ru: 'Ваш выбор', uz: 'Sizning tanlovingiz', en: 'Your selection' },
   'order.open': { ru: 'Открыть', uz: 'Ochish', en: 'Open' },
   'order.empty': { ru: 'Пока пусто', uz: "Hozircha bo'sh", en: 'Nothing here yet' },
+
+  // Отправка заказа на сервер.
+  'order.send': { ru: 'Отправить официанту', uz: 'Ofitsiantga yuborish', en: 'Send to the waiter' },
+  'order.sending': { ru: 'Отправляем...', uz: 'Yuborilmoqda...', en: 'Sending...' },
+  'order.retry': { ru: 'Повторить', uz: 'Qayta urinish', en: 'Try again' },
+  'order.sent': { ru: 'Заказ отправлен', uz: 'Buyurtma yuborildi', en: 'Order sent' },
+  'order.table': { ru: 'Стол {table}', uz: '{table}-stol', en: 'Table {table}' },
+  'order.note.label': { ru: 'Пожелание кухне', uz: 'Oshxonaga izoh', en: 'Note for the kitchen' },
+  'order.note.hint': {
+    ru: 'Например: приборы отдельно, без лука',
+    uz: 'Masalan: asboblar alohida, piyozsiz',
+    en: 'For example: cutlery separately, no onion'
+  },
+  'order.notable.title': {
+    ru: 'Отсканируйте код на столе',
+    uz: 'Stoldagi kodni skanerlang',
+    en: 'Scan the code on your table'
+  },
+  'order.notable.body': {
+    ru: 'Заказ уходит на кухню вместе с номером стола. Откройте меню по QR-коду со своего стола, выбор сохранится.',
+    uz: "Buyurtma oshxonaga stol raqami bilan boradi. Menyuni o'z stolingizdagi QR-kod orqali oching, tanlovingiz saqlanadi.",
+    en: 'The order goes to the kitchen with your table number. Open the menu from the QR code on your table, your selection is kept.'
+  },
+  'error.network': {
+    ru: 'Не отправлено: нет связи. Заказ остался у вас, попробуйте ещё раз.',
+    uz: "Yuborilmadi: aloqa yo'q. Buyurtma sizda qoldi, qayta urinib ko'ring.",
+    en: 'Not sent: no connection. Your order is still here, please try again.'
+  },
+  'error.server': {
+    ru: 'Не отправлено: ресторан не ответил. Попробуйте ещё раз.',
+    uz: "Yuborilmadi: restoran javob bermadi. Qayta urinib ko'ring.",
+    en: 'Not sent: the restaurant did not answer. Please try again.'
+  },
+  'error.order': {
+    ru: 'Не отправлено: проверьте состав заказа.',
+    uz: 'Yuborilmadi: buyurtma tarkibini tekshiring.',
+    en: 'Not sent: please check the order contents.'
+  },
+  'error.limit': {
+    ru: 'Слишком много заказов с этого стола. Позовите официанта.',
+    uz: "Bu stoldan juda ko'p buyurtma. Ofitsiantni chaqiring.",
+    en: 'Too many orders from this table. Please call the waiter.'
+  },
+
+  // Экран статуса заказа.
+  'status.number': { ru: 'Заказ {number}', uz: '{number} buyurtma', en: 'Order {number}' },
+  'status.sentat': { ru: 'отправлен в {time}', uz: 'soat {time} da yuborildi', en: 'sent at {time}' },
+  'status.acceptedat': {
+    ru: 'принял заказ в {time}',
+    uz: 'buyurtmani soat {time} da qabul qildi',
+    en: 'accepted the order at {time}'
+  },
+  'status.back': { ru: 'В меню', uz: 'Menyuga', en: 'Back to menu' },
+  'status.more': { ru: 'Дозаказ', uz: "Qo'shimcha", en: 'Order more' },
+  'status.open': { ru: 'Мой заказ', uz: 'Mening buyurtmam', en: 'My order' },
+  'status.elapsed': { ru: 'минут', uz: 'daqiqa', en: 'minutes' },
+  'status.offline': {
+    ru: 'Связь пропала, обновим сами, как только появится',
+    uz: "Aloqa uzildi, paydo bo'lishi bilan yangilaymiz",
+    en: 'Connection lost, we will refresh as soon as it is back'
+  },
+  'status.state.new': { ru: 'У официанта', uz: 'Ofitsiantda', en: 'With the waiter' },
+  'status.state.accepted': { ru: 'Заказ принят', uz: 'Buyurtma qabul qilindi', en: 'Order accepted' },
+  'status.state.kitchen': { ru: 'Готовится', uz: 'Tayyorlanmoqda', en: 'Cooking' },
+  'status.state.served': { ru: 'Подано', uz: 'Berildi', en: 'Served' },
+  'status.state.paid': { ru: 'Оплачено', uz: "To'landi", en: 'Paid' },
+  'status.state.cancelled': { ru: 'Заказ отменён', uz: 'Buyurtma bekor qilindi', en: 'Order cancelled' },
+  'status.step.new': { ru: 'Заказ отправлен', uz: 'Buyurtma yuborildi', en: 'Order sent' },
+  'status.step.accepted': { ru: 'Официант принял', uz: 'Ofitsiant qabul qildi', en: 'Waiter accepted' },
+  'status.step.kitchen': { ru: 'Кухня готовит', uz: 'Oshxona tayyorlamoqda', en: 'Kitchen is cooking' },
+  'status.step.served': { ru: 'Подано к столу', uz: 'Stolga berildi', en: 'Served to the table' },
+  'status.hint.new': { ru: 'Со стола {table} через QR', uz: '{table}-stoldan QR orqali', en: 'From table {table} via QR' },
+  'status.hint.accepted': {
+    ru: 'Официант подтвердил состав и пожелания',
+    uz: 'Ofitsiant tarkib va istaklarni tasdiqladi',
+    en: 'The waiter confirmed the items and your notes'
+  },
+  'status.hint.kitchen': {
+    ru: 'Блюда на кухне, напитки уже в баре',
+    uz: 'Taomlar oshxonada, ichimliklar barda',
+    en: 'Dishes are in the kitchen, drinks are at the bar'
+  },
+  'status.hint.served': {
+    ru: 'Официант принесёт и отметит в приложении',
+    uz: 'Ofitsiant olib keladi va ilovada belgilaydi',
+    en: 'The waiter will bring it and mark it in the app'
+  },
+  'status.step.wait': { ru: 'ждём', uz: 'kutamiz', en: 'waiting' },
+  'status.waiter': { ru: 'ваш официант', uz: 'sizning ofitsiantingiz', en: 'your waiter' },
+  'status.waiter.none': {
+    ru: 'Официант скоро подойдёт',
+    uz: 'Ofitsiant tez orada keladi',
+    en: 'The waiter will come shortly'
+  },
+  'status.total': { ru: 'Со счётом и сервисом', uz: 'Hisob va xizmat bilan', en: 'With bill and service' },
+  'status.call': { ru: 'Позвать официанта', uz: 'Ofitsiantni chaqirish', en: 'Call the waiter' },
+  'status.call.sending': { ru: 'Зовём...', uz: 'Chaqirmoqdamiz...', en: 'Calling...' },
+  'status.call.sent': { ru: 'Официант идёт', uz: 'Ofitsiant kelmoqda', en: 'The waiter is coming' },
+  'status.call.ack': { ru: 'Вызов принят', uz: 'Chaqiruv qabul qilindi', en: 'Call accepted' },
+  'status.bill': { ru: 'Попросить счёт', uz: 'Hisobni so\'rash', en: 'Ask for the bill' },
+  'status.bill.sending': { ru: 'Просим...', uz: "So'ramoqdamiz...", en: 'Asking...' },
+  'status.bill.sent': { ru: 'Счёт несут', uz: 'Hisob olib kelinmoqda', en: 'The bill is on its way' },
+  'status.bill.ack': { ru: 'Вызов принят', uz: 'Chaqiruv qabul qilindi', en: 'Call accepted' },
+  'status.note': {
+    ru: 'Счёт можно разделить на гостей. Наличными, картой или Payme.',
+    uz: "Hisobni mehmonlar orasida bo'lish mumkin. Naqd, karta yoki Payme.",
+    en: 'The bill can be split between guests. Cash, card or Payme.'
+  },
+  'status.callfail': {
+    ru: 'Вызов не ушёл, попробуйте ещё раз',
+    uz: "Chaqiruv yuborilmadi, qayta urinib ko'ring",
+    en: 'The call did not go through, please try again'
+  },
   'error.camera.title': {
     ru: 'Нет доступа к камере',
     uz: "Kameraga ruxsat yo'q",

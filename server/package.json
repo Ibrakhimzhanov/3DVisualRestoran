@@ -1,0 +1,15 @@
+{
+  "name": "menulive-orders",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Сервер заказов MenuLive: HTTP API и поток SSE без внешних зависимостей",
+  "type": "module",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test": "node test/run.js"
+  }
+}

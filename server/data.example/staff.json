@@ -1,0 +1,16 @@
+{
+  "staff": [
+    {
+      "id": "aziz",
+      "name": "Азиз Каримов",
+      "initials": "АК",
+      "restaurant": "brest"
+    },
+    {
+      "id": "dilnoza",
+      "name": "Дилноза Рахимова",
+      "initials": "ДР",
+      "restaurant": "brest"
+    }
+  ]
+}

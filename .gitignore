@@ -8,3 +8,23 @@ secrets/
 remotion-sandbox/out/
 remotion-sandbox/public/brest/
 media-out/*-silent.mp4
+
+# Боевые данные сервера заказов: в репозиторий кладём только server/data.example/
+server/data/
+
+# Визуальный компаньон brainstorming
+.superpowers/
+
+# Приложение официанта: сборка и ключи подписи
+waiter-app/android/local.properties
+waiter-app/android/keystore.properties
+waiter-app/android/.gradle/
+waiter-app/android/build/
+waiter-app/android/app/build/
+*.jks
+*.keystore
+
+# Сервер заказов: боевые данные и секреты
+server/data/
+server/node_modules/
+server/.env

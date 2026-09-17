@@ -13,6 +13,31 @@ const TOAST_MS = 2000;
 const DOT = ' · '; // точка-разделитель с неразрывными пробелами
 const HIDDEN = 'ml-hidden';
 const LANGS_ALL = ['ru', 'uz', 'en']; // чтобы узнать текст тоста об ошибке видео на любом языке
+const STATUS_STEPS = ['new', 'accepted', 'kitchen', 'served']; // таймлайн экрана статуса
+const CLOCK_MS = 30000; // как часто пересчитывается счётчик минут на экране статуса
+
+// Время из RFC 3339 в местное «19:41». Мусор даёт пустую строку.
+function clock(iso) {
+  if (typeof iso !== 'string' || iso === '') return '';
+  const time = Date.parse(iso);
+  if (!Number.isFinite(time)) return '';
+  const d = new Date(time);
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
+// Сколько целых минут прошло с момента. Меньше нуля не бывает.
+function minutesSince(iso) {
+  if (typeof iso !== 'string' || iso === '') return 0;
+  const time = Date.parse(iso);
+  if (!Number.isFinite(time)) return 0;
+  return Math.max(0, Math.floor((Date.now() - time) / 60000));
+}
+
+// Инициалы из имени официанта, если сервер их не прислал.
+function initialsOf(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean).slice(0, 2);
+  return parts.map((p) => p[0].toUpperCase()).join('');
+}
 
 // Короткий конструктор узла.
 function h(tag, cls, text) {
@@ -89,6 +114,11 @@ export class UI extends Emitter {
     this._scanFrom = 0;
     this._scanTimer = null;
     this._toastTimer = null;
+    // Отправка заказа и экран статуса.
+    this._table = '';
+    this._send = { phase: 'idle', message: '' };
+    this._statusView = null;
+    this._statusTimer = null;
     this._nodes = {};
 
     this._build();
@@ -178,7 +208,11 @@ export class UI extends Emitter {
     n.startRing = h('span', 'ml-ring');
     n.start.append(n.startLabel, n.startRing);
     n.welcomeNocam = btn('ml-link ml-welcome__nocam', '', () => this.emit('nocam'));
-    n.welcomeBody.append(n.logo, n.welcomeTitle, n.welcomeWhy, n.start, n.welcomeNocam);
+    // Возврат к живому заказу с первого экрана: после перезагрузки страницы
+    // гость не должен терять свой заказ, пока камера ещё не открыта.
+    n.welcomeStatus = btn('ml-link ml-welcome__status', '', () => this.openStatus());
+    n.welcomeStatus.classList.add(HIDDEN);
+    n.welcomeBody.append(n.logo, n.welcomeTitle, n.welcomeWhy, n.start, n.welcomeNocam, n.welcomeStatus);
     n.powered = h('div', 'ml-welcome__powered');
     n.welcome.append(n.welcomeLangs, n.welcomeBody, n.powered);
 
@@ -191,7 +225,10 @@ export class UI extends Emitter {
     n.shareBtn = iconBtn('ml-icon ml-icon--share', ICONS.share, () => this.emit('share'));
     n.soundBtn = iconBtn('ml-icon ml-icon--sound', ICONS.soundOn, () => this.emit('sound'), 'sound');
     n.soundBtn.classList.add(HIDDEN);
-    n.actions.append(n.langBtn, n.shareBtn, n.soundBtn);
+    // Возврат на экран статуса, пока заказ живой. Появляется после отправки.
+    n.statusBtn = iconBtn('ml-icon ml-icon--status', ICONS.bill, () => this.openStatus(), 'status');
+    n.statusBtn.classList.add(HIDDEN);
+    n.actions.append(n.langBtn, n.statusBtn, n.shareBtn, n.soundBtn);
     n.headerRow.append(n.cats, n.actions);
     n.filters = h('div', 'ml-filters ml-scroller');
     n.header.append(n.headerRow, n.filters);
@@ -266,24 +303,67 @@ export class UI extends Emitter {
     n.sheetPanel = h('div', 'ml-sheet__panel');
     n.sheetGrip = h('div', 'ml-sheet__grip');
     n.sheetHead = h('div', 'ml-sheet__head');
+    n.sheetTitles = h('div', 'ml-sheet__titles');
     n.sheetTitle = h('h2', 'ml-sheet__title');
+    n.sheetSub = h('div', 'ml-sheet__sub'); // «Стол 12», когда номер стола известен
+    n.sheetTitles.append(n.sheetTitle, n.sheetSub);
     n.sheetClose = iconBtn('ml-icon ml-sheet__close', ICONS.close, () => this.closeOrderSheet(), 'close');
-    n.sheetHead.append(n.sheetTitle, n.sheetClose);
+    n.sheetHead.append(n.sheetTitles, n.sheetClose);
     n.sheetList = h('div', 'ml-sheet__list');
     n.sheetEmpty = h('div', 'ml-sheet__empty');
     n.sheetTotal = h('div', 'ml-sheet__total');
     n.sheetTotalLabel = h('span', 'ml-sheet__total-label');
     n.sheetTotalValue = h('b', 'ml-sheet__total-value');
     n.sheetTotal.append(n.sheetTotalLabel, n.sheetTotalValue);
+
+    // Пожелание кухне: одна строка, уходит вместе с заказом и видна официанту.
+    n.sheetNote = h('div', 'ml-note');
+    n.sheetNoteLabel = h('label', 'ml-note__label');
+    n.sheetNoteLabel.htmlFor = 'ml-note-input';
+    n.sheetNoteInput = h('input', 'ml-note__input');
+    n.sheetNoteInput.id = 'ml-note-input';
+    n.sheetNoteInput.type = 'text';
+    n.sheetNoteInput.maxLength = 200;
+    n.sheetNoteInput.autocomplete = 'off';
+    n.sheetNote.append(n.sheetNoteLabel, n.sheetNoteInput);
+
+    // Мягкий экран «стола нет»: заказ не отправляем, выбор не теряем.
+    n.sheetNoTable = h('div', 'ml-notable');
+    n.sheetNoTableTitle = h('div', 'ml-notable__title');
+    n.sheetNoTableBody = h('p', 'ml-notable__body');
+    n.sheetNoTable.append(n.sheetNoTableTitle, n.sheetNoTableBody);
+
+    // Отправка не прошла: текст ошибки и кнопка «Повторить».
+    n.sheetFail = h('div', 'ml-fail');
+    n.sheetFailText = h('span', 'ml-fail__text');
+    n.sheetFailRetry = btn('ml-fail__retry', '', () => this.emit('send'));
+    n.sheetFail.append(n.sheetFailText, n.sheetFailRetry);
+
     n.sheetActions = h('div', 'ml-sheet__actions');
-    n.sheetShow = btn('ml-btn ml-btn--primary ml-sheet__show', '', () => this.showWaiterScreen(this._sheetDishes));
+    n.sheetSend = btn('ml-btn ml-btn--primary ml-sheet__send', '', () => this.emit('send'));
+    n.sheetSendLabel = h('span', 'ml-btn__label');
+    n.sheetSendRing = h('span', 'ml-ring');
+    n.sheetSend.append(n.sheetSendLabel, n.sheetSendRing);
+    n.sheetShow = btn('ml-btn ml-btn--ghost ml-sheet__show', '', () => this.showWaiterScreen(this._sheetDishes));
     n.sheetWrite = h('a', 'ml-btn ml-btn--ghost ml-sheet__write');
     n.sheetWrite.target = '_blank';
     n.sheetWrite.rel = 'noopener noreferrer';
     n.sheetReview = btn('ml-btn ml-btn--ghost ml-sheet__review', '', () => this.emit('review'));
-    n.sheetActions.append(n.sheetShow, n.sheetWrite, n.sheetReview);
-    n.sheetPanel.append(n.sheetGrip, n.sheetHead, n.sheetList, n.sheetEmpty, n.sheetTotal, n.sheetActions);
+    n.sheetActions.append(n.sheetSend, n.sheetShow, n.sheetWrite, n.sheetReview);
+    n.sheetPanel.append(
+      n.sheetGrip,
+      n.sheetHead,
+      n.sheetList,
+      n.sheetEmpty,
+      n.sheetTotal,
+      n.sheetNote,
+      n.sheetNoTable,
+      n.sheetFail,
+      n.sheetActions
+    );
     n.sheet.append(n.sheetBack, n.sheetPanel);
+
+    this._buildStatus();
 
     // экран официанта
     n.waiter = h('div', 'ml-waiter');
@@ -308,9 +388,76 @@ export class UI extends Emitter {
     n.errBox.append(n.errIcon, n.errTitle, n.errBody, n.errQr, n.errDetail, n.errActions);
     n.error.appendChild(n.errBox);
 
-    this._mounted = [n.welcome, n.header, n.mid, n.bottom, n.sheet, n.waiter, n.error];
+    this._mounted = [n.welcome, n.header, n.mid, n.bottom, n.sheet, n.status, n.waiter, n.error];
     for (const node of this._mounted) this.root.appendChild(node);
     this._renderLangs();
+  }
+
+  // Экран статуса заказа: шапка, крупный статус, таймлайн, официант,
+  // состав с суммой и две кнопки вызова внизу.
+  _buildStatus() {
+    const n = this._nodes;
+
+    n.status = h('div', 'ml-status');
+
+    n.stHead = h('div', 'ml-status__head');
+    n.stBack = iconBtn('ml-status__back', ICONS.back, () => this.closeStatus(), 'back');
+    n.stHeadText = h('div', 'ml-status__head-text');
+    n.stNumber = h('div', 'ml-status__number');
+    n.stSub = h('div', 'ml-status__sub');
+    n.stHeadText.append(n.stNumber, n.stSub);
+    n.stMore = btn('ml-status__more', '', () => {
+      this.closeStatus();
+      this.emit('reorder');
+    });
+    n.stHead.append(n.stBack, n.stHeadText, n.stMore);
+
+    n.stBody = h('div', 'ml-status__body');
+
+    n.stHero = h('div', 'ml-status__hero');
+    n.stHeroMain = h('div', 'ml-status__hero-main');
+    n.stBadge = h('div', 'ml-status__badge');
+    n.stDot = h('i', 'ml-status__dot');
+    n.stBadgeLabel = h('span', 'ml-status__badge-label');
+    n.stBadge.append(n.stDot, n.stBadgeLabel);
+    n.stTitle = h('h1', 'ml-status__title');
+    n.stNote = h('div', 'ml-status__note');
+    n.stHeroMain.append(n.stBadge, n.stTitle, n.stNote);
+    n.stClock = h('div', 'ml-status__clock');
+    n.stClockNum = h('div', 'ml-status__clock-num');
+    n.stClockUnit = h('div', 'ml-status__clock-unit');
+    n.stClock.append(n.stClockNum, n.stClockUnit);
+    n.stHero.append(n.stHeroMain, n.stClock);
+
+    n.stTimeline = h('div', 'ml-status__timeline');
+
+    n.stWaiter = h('div', 'ml-status__waiter');
+    n.stAvatar = h('span', 'ml-status__avatar');
+    n.stWaiterText = h('div', 'ml-status__waiter-text');
+    n.stWaiterName = h('div', 'ml-status__waiter-name');
+    n.stWaiterRole = h('div', 'ml-status__waiter-role');
+    n.stWaiterText.append(n.stWaiterName, n.stWaiterRole);
+    n.stWaiter.append(n.stAvatar, n.stWaiterText);
+
+    n.stLines = h('div', 'ml-status__lines');
+    n.stTotal = h('div', 'ml-status__total');
+    n.stTotalLabel = h('span', 'ml-status__total-label');
+    n.stTotalValue = h('b', 'ml-status__total-value');
+    n.stTotal.append(n.stTotalLabel, n.stTotalValue);
+
+    n.stBody.append(n.stHero, n.stTimeline, n.stWaiter, n.stLines, n.stTotal);
+
+    n.stFoot = h('div', 'ml-status__foot');
+    n.stCalls = h('div', 'ml-status__calls');
+    n.stCallBtn = btn('ml-call', '', () => this.emit('call', 'waiter'));
+    n.stCallBtn.append(icon(ICONS.bell, true), h('span', 'ml-call__label'));
+    n.stBillBtn = btn('ml-call', '', () => this.emit('call', 'bill'));
+    n.stBillBtn.append(icon(ICONS.bill, true), h('span', 'ml-call__label'));
+    n.stCalls.append(n.stCallBtn, n.stBillBtn);
+    n.stFootNote = h('p', 'ml-status__foot-note');
+    n.stFoot.append(n.stCalls, n.stFootNote);
+
+    n.status.append(n.stHead, n.stBody, n.stFoot);
   }
 
   // Статические тексты интерфейса.
@@ -320,6 +467,7 @@ export class UI extends Emitter {
     n.welcomeWhy.textContent = this._t('welcome.why');
     n.startLabel.textContent = this._t('welcome.start');
     n.welcomeNocam.textContent = this._t('welcome.nocam');
+    n.welcomeStatus.textContent = this._t('status.open');
     n.powered.textContent = this._t('welcome.powered');
     n.scanText.textContent = this._t('scan.aim');
     n.scanTip.textContent = this._t('scan.tip');
@@ -333,6 +481,16 @@ export class UI extends Emitter {
     n.sheetShow.textContent = this._t('order.show');
     n.sheetWrite.textContent = this._t('order.write');
     n.sheetReview.textContent = this._t('order.review');
+    n.sheetNoTableTitle.textContent = this._t('order.notable.title');
+    n.sheetNoTableBody.textContent = this._t('order.notable.body');
+    n.sheetFailRetry.textContent = this._t('order.retry');
+    n.sheetNoteLabel.textContent = this._t('order.note.label');
+    n.sheetNoteInput.placeholder = this._t('order.note.hint');
+    n.stBack.setAttribute('aria-label', this._t('status.back'));
+    n.statusBtn.setAttribute('aria-label', this._t('status.open'));
+    n.stMore.textContent = this._t('status.more');
+    n.stTotalLabel.textContent = this._t('status.total');
+    n.stFootNote.textContent = this._t('status.note');
     n.waiterDone.textContent = this._t('order.done');
     n.addBtn.textContent = this._t('card.add');
     n.langBtn.textContent = String(this.lang || '').toUpperCase();
@@ -385,6 +543,7 @@ export class UI extends Emitter {
     this.renderOrder(this._count, this._total);
     if (this.root.classList.contains('ml-sheet-open')) this._renderSheet();
     if (this.root.classList.contains('ml-waiter-open')) this._renderWaiter();
+    if (this._statusView) this.renderStatus(this._statusView);
     if (this._state === 'error') this._renderError(this._detail || {});
   }
 
@@ -667,6 +826,18 @@ export class UI extends Emitter {
     this.root.classList.remove('ml-sheet-open');
   }
 
+  // Пожелание кухне из поля ввода. Длину режем, чтобы не отправить на сервер простыню.
+  orderComment() {
+    const input = this.nodes.sheetNoteInput;
+    if (!input) return '';
+    return String(input.value || '').trim().slice(0, 200);
+  }
+
+  // После успешной отправки поле чистим вместе с корзиной.
+  clearOrderComment() {
+    if (this.nodes.sheetNoteInput) this.nodes.sheetNoteInput.value = '';
+  }
+
   _rows(dishes, items) {
     const list = Array.isArray(dishes) && dishes.length ? dishes : this._dishes;
     const byId = new Map(list.map((d) => [d.id, d]));
@@ -712,8 +883,35 @@ export class UI extends Emitter {
     const empty = rows.length === 0;
     show(n.sheetEmpty, empty);
     show(n.sheetTotal, !empty);
+    // Пожелание кухне нужно только когда есть что заказывать и известен стол.
+    show(n.sheetNote, !empty);
     show(n.sheetActions, !empty);
     n.sheetTotalValue.textContent = this._price(this._sum(rows));
+    this._renderSend(empty);
+  }
+
+  // Блок отправки: номер стола, кнопка, прогресс и ошибка.
+  _renderSend(empty) {
+    const n = this._nodes;
+    const hasRows = empty === undefined ? this._rows(this._sheetDishes, null).length > 0 : !empty;
+    const hasTable = Boolean(this._table);
+    const phase = this._send.phase;
+
+    n.sheetSub.textContent = hasTable ? this._t('order.table', { table: this._table }) : '';
+    show(n.sheetSub, hasTable);
+
+    // Стола нет: вместо кнопки мягкая подсказка, выбор при этом не трогаем.
+    show(n.sheetNoTable, hasRows && !hasTable);
+    show(n.sheetSend, hasTable);
+
+    const sending = phase === 'sending';
+    n.sheetSendLabel.textContent = this._t(sending ? 'order.sending' : 'order.send');
+    n.sheetSend.classList.toggle('is-busy', sending);
+    n.sheetSend.disabled = sending;
+
+    const failed = phase === 'failed' && Boolean(this._send.message);
+    n.sheetFailText.textContent = this._send.message || '';
+    show(n.sheetFail, failed && hasTable);
   }
 
   _sheetStep(id, delta) {
@@ -754,6 +952,191 @@ export class UI extends Emitter {
     this.closeOrderSheet();
     // главный модуль решает, очищать заказ или нет
     this.emit('reset');
+  }
+
+  // ---------- отправка заказа ----------
+
+  // Номер стола из QR. Пустая строка значит «стола нет».
+  setTable(table) {
+    this._table = typeof table === 'string' ? table : '';
+    this._renderSend();
+  }
+
+  // Фаза отправки: idle, sending, failed. message это готовый текст ошибки.
+  setSendState(phase, message) {
+    this._send = {
+      phase: ['idle', 'sending', 'failed'].indexOf(phase) === -1 ? 'idle' : phase,
+      message: typeof message === 'string' ? message : ''
+    };
+    this._renderSend();
+  }
+
+  // ---------- экран статуса ----------
+
+  // Кнопки возврата на экран статуса: в шапке и на экране приветствия.
+  setStatusAvailable(available) {
+    const on = Boolean(available);
+    show(this._nodes.statusBtn, on);
+    show(this._nodes.welcomeStatus, on);
+  }
+
+  openStatus() {
+    this.closeOrderSheet();
+    // Данные могут ещё грузиться: рисуем то, что есть, хотя бы скелет.
+    if (!this._statusView) this.renderStatus(null);
+    this.root.classList.add('ml-status-open');
+    this._startClock();
+  }
+
+  closeStatus() {
+    this.root.classList.remove('ml-status-open');
+    this._stopClock();
+    this.emit('status-close');
+  }
+
+  isStatusOpen() {
+    return this.root.classList.contains('ml-status-open');
+  }
+
+  _startClock() {
+    if (this._statusTimer) return;
+    this._statusTimer = setInterval(() => this._renderClock(), CLOCK_MS);
+  }
+
+  _stopClock() {
+    if (!this._statusTimer) return;
+    clearInterval(this._statusTimer);
+    this._statusTimer = null;
+  }
+
+  _renderClock() {
+    const view = this._statusView;
+    const order = view && view.order ? view.order : null;
+    if (!order) return;
+    this._nodes.stClockNum.textContent = String(minutesSince(order.createdAt));
+  }
+
+  // view: { order, steps, calls, online }. Всё из order приходит с сервера
+  // и потому недоверенное: только textContent, никакого innerHTML.
+  renderStatus(view) {
+    this._statusView = view && typeof view === 'object' ? view : null;
+    const n = this._nodes;
+    const order = this._statusView && this._statusView.order ? this._statusView.order : null;
+    // Данных ещё нет (грузим заказ после перезагрузки): показываем скелет,
+    // чтобы гость не смотрел в пустой экран.
+    if (!order) {
+      n.stNumber.textContent = this._t('status.open');
+      n.stSub.textContent = this._table ? this._t('order.table', { table: this._table }) : '';
+      n.stBadgeLabel.textContent = this._t('status.state.new');
+      n.stTitle.textContent = this._t('status.state.new');
+      n.stClockNum.textContent = '';
+      n.stClockUnit.textContent = '';
+      n.stTimeline.textContent = '';
+      show(n.stWaiter, false);
+      show(n.stLines, false);
+      show(n.stTotal, false);
+      show(n.stNote, false);
+      return;
+    }
+
+    const steps = Array.isArray(this._statusView.steps) ? this._statusView.steps : [];
+    const calls = this._statusView.calls && typeof this._statusView.calls === 'object'
+      ? this._statusView.calls
+      : {};
+    const online = this._statusView.online !== false;
+
+    // шапка
+    n.stNumber.textContent = this._t('status.number', { number: order.number || order.id });
+    const sentAt = clock(order.createdAt);
+    const subParts = [];
+    if (order.table) subParts.push(this._t('order.table', { table: order.table }));
+    if (sentAt) subParts.push(this._t('status.sentat', { time: sentAt }));
+    n.stSub.textContent = subParts.join(DOT);
+
+    // крупный статус
+    const status = order.status || 'new';
+    const label = this._t('status.state.' + status);
+    n.stBadgeLabel.textContent = label;
+    n.stTitle.textContent = label;
+    for (const s of ['new', 'accepted', 'kitchen', 'served', 'paid', 'cancelled']) {
+      n.status.classList.toggle('is-' + s, s === status);
+    }
+    n.stNote.textContent = online ? '' : this._t('status.offline');
+    show(n.stNote, !online);
+    n.status.classList.toggle('is-offline', !online);
+
+    n.stClockNum.textContent = String(minutesSince(order.createdAt));
+    n.stClockUnit.textContent = this._t('status.elapsed');
+
+    // таймлайн
+    n.stTimeline.textContent = '';
+    const list = steps.length
+      ? steps
+      : STATUS_STEPS.map((s) => ({ status: s, at: '', state: 'next' }));
+    list.forEach((step, i) => {
+      const row = h('div', 'ml-step is-' + (step.state || 'next'));
+      const rail = h('div', 'ml-step__rail');
+      rail.appendChild(h('i', 'ml-step__dot'));
+      if (i < list.length - 1) rail.appendChild(h('i', 'ml-step__line'));
+      const body = h('div', 'ml-step__body');
+      const head = h('div', 'ml-step__row');
+      head.append(
+        h('span', 'ml-step__label', this._t('status.step.' + step.status)),
+        h('span', 'ml-step__time', clock(step.at) || this._t('status.step.wait'))
+      );
+      const hint = step.status === 'new'
+        ? this._t('status.hint.new', { table: order.table || '' })
+        : this._t('status.hint.' + step.status);
+      body.append(head, h('div', 'ml-step__hint', hint));
+      row.append(rail, body);
+      n.stTimeline.appendChild(row);
+    });
+
+    // официант
+    const waiter = order.waiter;
+    const name = waiter && waiter.name ? waiter.name : '';
+    const initials = waiter && waiter.initials ? waiter.initials : initialsOf(name);
+    n.stAvatar.textContent = initials;
+    show(n.stAvatar, Boolean(initials));
+    n.stWaiterName.textContent = name || this._t('status.waiter.none');
+    const acceptedAt = clock((steps.find((s) => s.status === 'accepted') || {}).at);
+    n.stWaiterRole.textContent = name
+      ? (acceptedAt
+        ? this._t('status.waiter') + DOT + this._t('status.acceptedat', { time: acceptedAt })
+        : this._t('status.waiter'))
+      : '';
+    show(n.stWaiterRole, Boolean(name));
+    show(n.stWaiter, true);
+
+    // состав и сумма
+    n.stLines.textContent = '';
+    const items = Array.isArray(order.items) ? order.items : [];
+    for (const item of items) {
+      const line = h('div', 'ml-status__line');
+      line.append(
+        h('span', 'ml-status__qty', String(item.qty)),
+        h('span', 'ml-status__name', item.name || item.dishId || ''),
+        h('span', 'ml-status__sum', this._price((Number(item.price) || 0) * item.qty))
+      );
+      n.stLines.appendChild(line);
+    }
+    show(n.stLines, items.length > 0);
+    n.stTotalValue.textContent = this._price(order.total);
+    show(n.stTotal, Number(order.total) > 0);
+
+    // кнопки вызова
+    this._renderCall(n.stCallBtn, 'call', calls.waiter || 'idle');
+    this._renderCall(n.stBillBtn, 'bill', calls.bill || 'idle');
+  }
+
+  // Одна кнопка вызова. state: idle, sending, sent, ack.
+  _renderCall(node, prefix, state) {
+    const known = ['idle', 'sending', 'sent', 'ack'].indexOf(state) === -1 ? 'idle' : state;
+    const key = known === 'idle' ? 'status.' + prefix : 'status.' + prefix + '.' + known;
+    const label = node.querySelector('.ml-call__label');
+    if (label) label.textContent = this._t(key);
+    node.classList.toggle('is-live', known === 'sent' || known === 'ack');
+    node.disabled = known === 'sending';
   }
 
   // ---------- ошибки ----------
@@ -868,13 +1251,14 @@ export class UI extends Emitter {
 
   destroy() {
     this._scanStop();
+    this._stopClock();
     if (this._toastTimer) clearTimeout(this._toastTimer);
     this._toastTimer = null;
     for (const node of this._mounted || []) {
       if (node && node.parentNode) node.parentNode.removeChild(node);
     }
     this._mounted = [];
-    this.root.classList.remove('ml-root', 'ml-has-order', 'ml-no-card', 'ml-sheet-open', 'ml-waiter-open', 'ml-watch-on');
+    this.root.classList.remove('ml-root', 'ml-has-order', 'ml-no-card', 'ml-sheet-open', 'ml-waiter-open', 'ml-watch-on', 'ml-status-open');
     for (const s of STATES) this.root.classList.remove('ml-state-' + s);
     this.clear();
   }

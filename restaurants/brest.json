@@ -54,6 +54,9 @@
   "waiter": {
     "url": ""
   },
+  "api": {
+    "baseUrl": ""
+  },
   "reviewUrl": "",
   "hotspots": false,
   "categories": [

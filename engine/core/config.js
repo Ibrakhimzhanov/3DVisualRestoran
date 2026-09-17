@@ -43,6 +43,9 @@ const DEFAULT_TRACKING = {
 
 const DEFAULT_WAITER = { url: '' };
 
+// Адрес API заказов. Пусто - берём текущий origin плюс /api/v1 (см. core/api.js).
+const DEFAULT_API = { baseUrl: '' };
+
 function isPlainObject(v) {
   return v !== null && typeof v === 'object' && !Array.isArray(v);
 }
@@ -122,6 +125,7 @@ export function validateConfig(raw) {
   cfg.stage = withDefaults(DEFAULT_STAGE, src.stage);
   cfg.tracking = withDefaults(DEFAULT_TRACKING, src.tracking);
   cfg.waiter = withDefaults(DEFAULT_WAITER, src.waiter);
+  cfg.api = withDefaults(DEFAULT_API, src.api);
 
   // Ширина сцены нужна всегда и должна быть положительным числом.
   need(

@@ -1,0 +1,49 @@
+# Сервер заказов MenuLive.
+# Установка на сервере:
+#   ln -sf /var/www/ar-menu/deploy/menulive-orders.service /etc/systemd/system/menulive-orders.service
+#   systemctl daemon-reload
+#   systemctl enable --now menulive-orders
+# Логи:
+#   journalctl -u menulive-orders -f
+
+[Unit]
+Description=MenuLive orders API
+Documentation=file:///var/www/ar-menu/docs/api-orders.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/ar-menu/server
+
+# Токен персонала и порт лежат только здесь, в репозитории их нет.
+# Файл создаётся руками: chmod 600, владелец root:root.
+EnvironmentFile=/etc/menulive-orders.env
+Environment=NODE_ENV=production
+
+ExecStart=/usr/bin/node /var/www/ar-menu/server/index.js
+
+Restart=always
+RestartSec=2
+# Если сервис падает чаще пяти раз за минуту, systemd перестаёт его поднимать.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=menulive-orders
+
+# Ограничения: писать можно только в папку с данными.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+ReadWritePaths=/var/www/ar-menu/server/data
+
+[Install]
+WantedBy=multi-user.target

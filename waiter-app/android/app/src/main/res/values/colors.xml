@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ml_ground">#FF0B1106</color>
+    <color name="ml_surface">#FF18240F</color>
+    <color name="ml_brass">#FFC8A55C</color>
+</resources>

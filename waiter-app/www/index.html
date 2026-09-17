@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0B1106">
+<title>MenuLive - официант</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Полоска обрыва связи -->
+  <div class="netbar" id="netbar">
+    <span class="netbar-dot"></span>
+    <span id="netbarText">нет связи, переподключение</span>
+  </div>
+
+  <!-- ЭКРАН: НАСТРОЙКИ -->
+  <section class="screen" id="screenSettings" hidden>
+    <header class="hdr">
+      <button type="button" class="icon-btn icon-btn-lead" id="setBack" aria-label="Назад к ленте заказов" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+      </button>
+      <div class="hdr-main">
+        <h1 class="hdr-h1">Настройки</h1>
+        <div class="hdr-sub">адрес сервера и токен персонала</div>
+      </div>
+    </header>
+
+    <div class="set-body">
+      <div class="field">
+        <label class="sec-cap" for="fBase">Адрес сервера</label>
+        <input id="fBase" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://armenu.shumtuber.uz/api/v1">
+        <div class="field-hint">База API, без косой черты на конце</div>
+      </div>
+
+      <div class="field">
+        <label class="sec-cap" for="fToken">Токен персонала</label>
+        <input id="fToken" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="X-Staff-Token">
+        <div class="field-hint">Хранится только на этом устройстве</div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="sec-cap" for="fRest">Ресторан</label>
+          <input id="fRest" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="brest">
+        </div>
+        <div class="field">
+          <label class="sec-cap" for="fTables">Столов</label>
+          <input id="fTables" type="number" inputmode="numeric" min="1" max="99" placeholder="12">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="sec-cap" for="fName">Имя официанта</label>
+          <input id="fName" type="text" autocomplete="off" placeholder="Азиз Каримов">
+        </div>
+        <div class="field">
+          <label class="sec-cap" for="fBy">Логин (by)</label>
+          <input id="fBy" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="aziz">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="sec-cap" for="fHall">Название зала</label>
+        <input id="fHall" type="text" autocomplete="off" placeholder="Зал 1">
+      </div>
+
+      <div class="set-note" id="setNote"></div>
+    </div>
+
+    <div class="ord-foot">
+      <button type="button" class="btn-primary" id="setSave">Сохранить и подключиться</button>
+      <div class="ord-sub-actions">
+        <button type="button" class="btn-ghost" id="setCheck">Проверить связь</button>
+        <span class="divider-v"></span>
+        <button type="button" class="btn-ghost" id="setWipe">Стереть данные</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ЭКРАН: ЛЕНТА ЗАКАЗОВ -->
+  <section class="screen" id="screenInbox" hidden>
+    <header class="hdr">
+      <span class="avatar" id="inbAvatar">АК</span>
+      <div class="hdr-main">
+        <div class="hdr-name" id="inbName">Официант</div>
+        <div class="hdr-sub" id="inbSub">зал 1 · столы 1-12</div>
+      </div>
+      <div class="hdr-right">
+        <div class="hdr-clock" data-clock>00:00</div>
+        <div class="shift">
+          <span class="shift-dot" id="inbDot"></span>
+          <span class="shift-txt" id="inbShift">на смене</span>
+        </div>
+      </div>
+      <button type="button" class="icon-btn icon-btn-trail" data-go-settings aria-label="Настройки">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"></circle><path d="M12 3.4v2.2M12 18.4v2.2M20.6 12h-2.2M5.6 12H3.4M18.1 5.9l-1.6 1.6M7.5 16.5l-1.6 1.6M18.1 18.1l-1.6-1.6M7.5 7.5L5.9 5.9"></path></svg>
+      </button>
+    </header>
+
+    <div class="tabs" id="inbTabs"></div>
+
+    <div class="list" id="inbList"></div>
+
+    <nav class="nav">
+      <span class="nav-item is-on">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v17l-3.5-2-3.5 2-3.5-2L5 21z"></path><path d="M9 9h6"></path><path d="M9 13h6"></path></svg>
+        <span>Заказы</span>
+      </span>
+      <button type="button" class="nav-item" data-go="floor">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1"></rect><rect x="13.5" y="3.5" width="7" height="7" rx="1"></rect><rect x="3.5" y="13.5" width="7" height="7" rx="1"></rect><rect x="13.5" y="13.5" width="7" height="7" rx="1"></rect></svg>
+        <span>Зал</span>
+      </button>
+    </nav>
+  </section>
+
+  <!-- ЭКРАН: КАРТОЧКА ЗАКАЗА -->
+  <section class="screen" id="screenOrder" hidden>
+    <header class="hdr">
+      <button type="button" class="icon-btn icon-btn-lead" data-go="inbox" aria-label="Назад к ленте заказов">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+      </button>
+      <div class="hdr-main">
+        <h1 class="ord-title" id="ordTitle">Стол</h1>
+        <div class="ord-sub" id="ordSub"></div>
+      </div>
+      <div class="hdr-right">
+        <div class="ord-timer-label" id="ordTimerLabel">без ответа</div>
+        <div class="ord-timer" id="ordTimer">0:00</div>
+      </div>
+    </header>
+
+    <div class="stages" id="ordStages"></div>
+
+    <div class="ord-body">
+      <div id="ordBannerHost"></div>
+
+      <section class="sec">
+        <div class="sec-head">
+          <span class="sec-cap">Позиции</span>
+          <span class="sec-note" id="ordServed">0 из 0 подано</span>
+        </div>
+        <div class="card" id="ordLines"></div>
+      </section>
+
+      <section class="comment" id="ordComment" hidden>
+        <div class="sec-cap">Пожелание кухне</div>
+        <p id="ordCommentText"></p>
+      </section>
+
+      <section class="total">
+        <div>
+          <div class="total-cap">К оплате</div>
+          <div class="total-sub" id="ordTotalSub"></div>
+        </div>
+        <div class="total-val" id="ordTotal">0</div>
+      </section>
+    </div>
+
+    <div class="ord-foot">
+      <button type="button" class="btn-primary" id="ordPrimary">Принять заказ</button>
+      <div class="ord-sub-actions">
+        <button type="button" class="btn-ghost" id="ordBack">Шаг назад</button>
+        <span class="divider-v"></span>
+        <button type="button" class="btn-ghost" id="ordCancel">Проблема с заказом</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ЭКРАН: ЗАЛ -->
+  <section class="screen" id="screenFloor" hidden>
+    <header class="floor-hdr">
+      <div>
+        <h1 class="floor-title" id="flrTitle">Зал 1</h1>
+        <div class="floor-sub" id="flrSub"></div>
+      </div>
+      <div class="hdr-right">
+        <div class="occ"><b id="flrBusy">0</b><i id="flrAll">/12</i></div>
+        <div class="occ-cap">столов заняты</div>
+      </div>
+      <button type="button" class="icon-btn icon-btn-trail" data-go-settings aria-label="Настройки">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"></circle><path d="M12 3.4v2.2M12 18.4v2.2M20.6 12h-2.2M5.6 12H3.4M18.1 5.9l-1.6 1.6M7.5 16.5l-1.6 1.6M18.1 18.1l-1.6-1.6M7.5 7.5L5.9 5.9"></path></svg>
+      </button>
+    </header>
+
+    <div class="alert-wrap" id="flrAlertWrap" hidden>
+      <button type="button" class="alert" data-go="inbox">
+        <span class="alert-dot"></span>
+        <span class="alert-txt" id="flrAlertText"></span>
+        <span class="alert-ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+        </span>
+      </button>
+    </div>
+
+    <div class="legend">
+      <span class="l-item"><span class="dot d-free"></span><span class="cap">свободен</span></span>
+      <span class="l-item"><span class="dot d-order"></span><span class="cap">заказ в работе</span></span>
+      <span class="l-item"><span class="dot d-fresh"></span><span class="cap">новый заказ</span></span>
+      <span class="l-item"><span class="dot d-call"></span><span class="cap">зовёт или счёт</span></span>
+    </div>
+
+    <div class="tables">
+      <div class="tables-grid" id="flrGrid"></div>
+    </div>
+
+    <div class="stats-wrap">
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-v c-brass" id="stRevenue">0</div>
+          <div class="stat-c">выручка смены</div>
+        </div>
+        <div class="stat">
+          <div class="stat-v" id="stAvg">0</div>
+          <div class="stat-c">средний чек</div>
+        </div>
+        <div class="stat">
+          <div class="stat-v c-mint" id="stResp">-</div>
+          <div class="stat-c">отклик на заказ</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <button type="button" class="nav-item" data-go="inbox">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v17l-3.5-2-3.5 2-3.5-2L5 21z"></path><path d="M9 9h6"></path><path d="M9 13h6"></path></svg>
+        <span>Заказы</span>
+      </button>
+      <span class="nav-item is-on">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1"></rect><rect x="13.5" y="3.5" width="7" height="7" rx="1"></rect><rect x="3.5" y="13.5" width="7" height="7" rx="1"></rect><rect x="13.5" y="13.5" width="7" height="7" rx="1"></rect></svg>
+        <span>Зал</span>
+      </span>
+    </nav>
+  </section>
+
+</div>
+
+<!-- Статические иконки, клонируются через cloneNode. Данными сервера не наполняются. -->
+<template id="icoCheck">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l4.5 4.5L19.5 6.5"></path></svg>
+</template>
+<template id="icoCheckThin">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l4.5 4.5L19.5 6.5"></path></svg>
+</template>
+<template id="icoWarn">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v9"></path><path d="M12 18.5v.01"></path></svg>
+</template>
+
+<script src="app.js"></script>
+</body>
+</html>

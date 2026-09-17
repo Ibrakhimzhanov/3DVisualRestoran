@@ -5,6 +5,8 @@ import { pickLang, detectWebView, escapeUrl, isLikelyDesktop } from './core/env.
 import { stageSize } from './core/stage.js';
 import { t } from './core/i18n.js';
 import { Order } from './core/order.js';
+import { OrdersApi, ApiError, resolveBaseUrl, readTable } from './core/api.js';
+import { OrderStatus } from './core/status.js';
 import { createScene, registerAll } from './ar.js';
 import { Player } from './player.js';
 import { UI } from './ui.js';
@@ -44,6 +46,7 @@ class App {
     this._wireScene();
     this._wirePlayer();
     this._wireOrder();
+    this._wireOrders();
 
     this._selectCategory(this.categoryId, false);
     this._syncOrder();
@@ -301,6 +304,83 @@ class App {
     const total = this.order.total(this.dishes);
     this.ui.renderOrder(count, total);
     this._renderCard();
+  }
+
+  // ---------- отправка заказа и экран статуса ----------
+
+  _wireOrders() {
+    const cfg = this.config;
+    // Номер стола из ссылки вида /brest?t=12, дальше живёт в sessionStorage.
+    this.table = readTable(cfg.id, location.search);
+    this.api = new OrdersApi({
+      baseUrl: resolveBaseUrl(cfg, location.origin),
+      restaurant: cfg.id
+    });
+    this.status = new OrderStatus({ api: this.api, restaurantId: cfg.id });
+
+    this.ui.setTable(this.table);
+
+    this.status.on('change', () => this._syncStatus());
+    this.status.on('sent', () => {
+      // Позиции ушли на сервер: корзину чистим, гость уходит на экран статуса.
+      this.order.clear();
+      this.ui.clearOrderComment();
+      this.ui.closeOrderSheet();
+      this.ui.openStatus();
+      this.ui.toast(t('order.sent', this.lang));
+    });
+    this.status.on('failed', (err) => this.ui.toast(this._sendError(err)));
+    this.status.on('call-failed', () => this.ui.toast(t('status.callfail', this.lang)));
+
+    this.ui.on('send', () => this._send());
+    this.ui.on('call', (kind) => this.status.call(kind));
+
+    // Перезагрузка страницы: заказ есть в sessionStorage, сразу на статус.
+    if (this.status.hasOrder()) {
+      this.ui.setStatusAvailable(true);
+      this.ui.openStatus();
+      this.status.restore();
+    }
+  }
+
+  _send() {
+    if (!this.table) {
+      this.ui.toast(t('order.notable.title', this.lang));
+      return;
+    }
+    const items = this.order.items();
+    if (!items.length) return;
+    this.status.send({
+      table: this.table,
+      items,
+      comment: this.ui.orderComment(),
+      lang: this.lang
+    });
+  }
+
+  // Ошибка запроса в понятную гостю строку.
+  _sendError(err) {
+    const lang = this.lang;
+    if (!(err instanceof ApiError)) return t('error.server', lang);
+    if (err.code === 'network' || err.code === 'timeout') return t('error.network', lang);
+    if (err.code === 'no_table') return t('order.notable.title', lang);
+    if (err.code === 'bad_request') return t('error.order', lang);
+    if (err.code === 'rate_limited') return t('error.limit', lang);
+    return t('error.server', lang);
+  }
+
+  _syncStatus() {
+    const st = this.status;
+    this.ui.setStatusAvailable(st.hasOrder());
+    const phase = st.phase === 'sending' || st.phase === 'failed' ? st.phase : 'idle';
+    this.ui.setSendState(phase, phase === 'failed' ? this._sendError(st.error) : '');
+    if (!st.order) return;
+    this.ui.renderStatus({
+      order: st.order,
+      steps: st.steps(),
+      calls: { waiter: st.callState('waiter'), bill: st.callState('bill') },
+      online: st.online
+    });
   }
 
   // ---------- режимы без камеры ----------
