@@ -2,23 +2,16 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-  <meta name="theme-color" content="#12100E">
+  <meta name="robots" content="noindex">
   <title>Brest</title>
-  <link rel="icon" href="assets/brest/logo.png">
-  <!-- Шрифт интерфейса: Golos Text, держит кириллицу и узбекскую латиницу -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="engine/menulive.css?v=2">
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <link rel="canonical" href="brest.html">
+  <script>
+    // Страница движка переехала на brest.html, это адрес из QR-кода.
+    // Номер стола и язык из ссылки нужно донести, иначе гость потеряет стол.
+    location.replace('brest.html' + location.search + location.hash);
+  </script>
 </head>
-<body data-config="restaurants/brest.json">
-  <!-- Контейнер AR-сцены: MindAR кладёт видео камеры сюда же -->
-  <div id="ml-scene"></div>
-  <!-- Слой интерфейса -->
-  <div id="ml-root"></div>
-  <script type="module" src="engine/main.js?v=1"></script>
+<body>
+  <noscript><a href="brest.html">Открыть меню Brest</a></noscript>
 </body>
 </html>
